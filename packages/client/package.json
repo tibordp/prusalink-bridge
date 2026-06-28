@@ -1,6 +1,6 @@
 {
   "name": "@tibordp/prusalink-bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Page-facing client for the PrusaLink Bridge browser extension (unofficial; not affiliated with Prusa Research). Pure postMessage, zero runtime dependencies; lets a web app drive the user's own PrusaLink printers via the extension, with explicit per-origin consent.",
   "license": "MIT",
   "author": "Tibor Djurica Potpara <tibor.djurica@ojdip.net>",

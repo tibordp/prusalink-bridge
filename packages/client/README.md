@@ -1,6 +1,7 @@
 # @tibordp/prusalink-bridge
 
-The page-facing client for the [PrusaLink Bridge](../../README.md) browser
+The page-facing client for the
+[PrusaLink Bridge](https://tibordp.github.io/prusalink-bridge/) browser
 extension. Pure `window.postMessage` — **zero runtime dependencies**, contains no
 extension code. Your web app depends on this; the user installs the extension.
 
