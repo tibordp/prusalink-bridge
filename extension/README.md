@@ -18,6 +18,12 @@ pnpm --filter prusalink-bridge-extension build  # → .output/chrome-mv3
 - **Firefox:** `pnpm dev:firefox`, or load `.output/firefox-mv2/manifest.json`
   via `about:debugging` → _This Firefox_ → _Load Temporary Add-on_.
 
+For an **AMO submission**, `pnpm zip:firefox` emits both the add-on zip and a
+complete, buildable `…-sources.zip` (the whole monorepo, since the extension
+depends on the `packages/client` workspace package). Reproducible build steps for
+reviewers are in [`BUILD.md`](../BUILD.md). Chrome Web Store needs no source —
+it reviews the uploaded (minified, non-obfuscated) zip directly.
+
 ## Using it
 
 1. Open the **options** page (right-click the toolbar icon → Options, or the
