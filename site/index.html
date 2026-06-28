@@ -3,214 +3,97 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PrusaLink Bridge — drive your PrusaLink printers from the web</title>
+    <title>PrusaLink Bridge</title>
     <meta
       name="description"
-      content="A browser extension that lets web apps you trust send jobs to your own PrusaLink printers over the LAN — gated by per-origin consent. Credentials never leave the extension."
+      content="Browser extension that lets web apps drive your own PrusaLink printers over the LAN, gated by per-origin consent."
     />
     <link rel="stylesheet" href="./style.css" />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c7cf0'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23ea6c2d'/%3E%3C/svg%3E"
     />
   </head>
   <body>
-    <nav>
-      <div class="wrap">
-        <a class="brand" href="#top"
-          ><span class="dot"></span> PrusaLink Bridge</a
-        >
-        <div class="links">
-          <a href="#how">How it works</a>
-          <a href="#demo">Demo</a>
-          <a href="#install">Install</a>
-          <a href="https://github.com/tibordp/prusalink-bridge">GitHub</a>
+    <h1>PrusaLink Bridge</h1>
+    <p>
+      A browser extension that lets web apps send G-code to
+      <strong>your own</strong>
+      PrusaLink printers over the LAN, gated by a per-origin consent prompt.
+      Printer URLs and credentials stay in the extension; a page only ever sees
+      a name, model, and status.
+    </p>
+    <p class="links">
+      <a href="https://github.com/tibordp/prusalink-bridge">GitHub</a> ·
+      <a href="https://www.npmjs.com/package/@tibordp/prusalink-bridge">npm</a>
+      ·
+      <a
+        href="https://github.com/tibordp/prusalink-bridge/tree/main/packages/client#readme"
+        >client docs</a
+      >
+    </p>
+    <p class="muted small">
+      Unofficial; not affiliated with Prusa Research. Not on the stores yet —
+      load a build from
+      <a href="https://github.com/tibordp/prusalink-bridge/releases"
+        >Releases</a
+      >
+      unpacked, or build from source.
+    </p>
+
+    <h2>Demo</h2>
+    <div class="status">
+      <span class="statedot" id="ext-dot"></span>
+      <span id="ext-status">Checking for the extension…</span>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <button id="b-available">available()</button>
+        <button class="primary" id="b-request">requestAccess()</button>
+        <button id="b-request-force">requestAccess(force)</button>
+        <button id="b-printers">printers()</button>
+      </div>
+      <div class="row">
+        <div class="field grow">
+          <label for="printer">Printer</label>
+          <select id="printer"></select>
+        </div>
+        <button id="b-status">status()</button>
+        <button id="b-cancel">cancel()</button>
+      </div>
+      <div class="row">
+        <div class="field grow">
+          <label for="file">File (optional; <code>.bgcode</code> ok)</label>
+          <input type="file" id="file" />
+        </div>
+        <div class="field grow">
+          <label for="filename">Name on printer</label>
+          <input id="filename" value="demo.gcode" />
         </div>
       </div>
-    </nav>
-
-    <header class="hero" id="top">
-      <div class="wrap">
-        <span class="badge"
-          >Unofficial · not affiliated with Prusa Research</span
+      <div class="row">
+        <div class="field">
+          <label for="timeout">Timeout ms</label>
+          <input
+            id="timeout"
+            type="number"
+            min="0"
+            placeholder="none"
+            style="width: 120px"
+          />
+        </div>
+        <label class="check"
+          ><input type="checkbox" id="start" checked /> start</label
         >
-        <h1>Drive your PrusaLink printers<br />from any web app you trust</h1>
-        <p class="lede">
-          A browser extension and a tiny client library that let a web app send
-          G-code to <strong>your own</strong> PrusaLink printers over the LAN —
-          gated by an explicit, per-origin consent prompt. Printer URLs and
-          credentials live only in the extension; the web app never sees them.
-        </p>
-        <div class="cta">
-          <a class="btn primary" href="#install">Get the extension</a>
-          <a class="btn" href="#demo">Try the live demo ↓</a>
-          <a class="btn" href="https://github.com/tibordp/prusalink-bridge"
-            >View source ↗</a
-          >
-        </div>
+        <span style="flex: 1"></span>
+        <button class="primary" id="b-print">print()</button>
+        <button id="b-cancel-upload" disabled>cancel upload</button>
       </div>
-    </header>
-
-    <main>
-      <section id="how" class="wrap">
-        <h2>How it works</h2>
-        <div class="h">
-          Browser-mediated, consent-gated, credential-isolated.
-        </div>
-        <div class="grid">
-          <div class="card">
-            <div class="ico">🔐</div>
-            <h3>Your credentials stay put</h3>
-            <p>
-              Printer addresses and API keys live only in the extension. A page
-              learns nothing but a name, model, and status — never a URL or
-              secret.
-            </p>
-          </div>
-          <div class="card">
-            <div class="ico">✅</div>
-            <h3>You approve each origin</h3>
-            <p>
-              First contact from a site triggers a consent prompt showing the
-              <em>browser-verified</em> origin. Printing defaults to a per-print
-              confirmation you can disable.
-            </p>
-          </div>
-          <div class="card">
-            <div class="ico">🖨️</div>
-            <h3>Any app, one tiny shim</h3>
-            <p>
-              Apps depend only on a zero-dependency npm package and talk over
-              <code>postMessage</code>. No allowlist — your consent is the gate.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section id="demo" class="wrap">
-        <h2>Live demo</h2>
-        <div class="h">Try the page API against your own printer.</div>
-        <div class="demo">
-          <div class="status">
-            <span class="statedot" id="ext-dot"></span>
-            <span id="ext-status">Checking for the extension…</span>
-          </div>
-          <div class="body">
-            <div class="row">
-              <button class="btn sm" id="b-available">available()</button>
-              <button class="btn sm primary" id="b-request">
-                requestAccess()
-              </button>
-              <button class="btn sm" id="b-request-force">
-                requestAccess(force)
-              </button>
-              <button class="btn sm" id="b-printers">printers()</button>
-            </div>
-
-            <div class="row">
-              <div class="field grow">
-                <label for="printer">Printer (granted)</label>
-                <select id="printer"></select>
-              </div>
-              <button class="btn sm" id="b-status">status()</button>
-              <button class="btn sm" id="b-cancel">cancel()</button>
-            </div>
-
-            <div class="row">
-              <div class="field grow">
-                <label for="file"
-                  >File to upload (any file; binary
-                  <code>.bgcode</code> works)</label
-                >
-                <input type="file" id="file" />
-              </div>
-              <div class="field grow">
-                <label for="filename">Name on printer</label>
-                <input id="filename" value="demo.gcode" />
-              </div>
-            </div>
-            <div class="row">
-              <div class="field">
-                <label for="timeout">Timeout ms (blank = none)</label>
-                <input
-                  id="timeout"
-                  type="number"
-                  min="0"
-                  placeholder="none"
-                  style="width: 130px"
-                />
-              </div>
-              <label class="check"
-                ><input type="checkbox" id="start" checked /> start
-                immediately</label
-              >
-              <span style="flex: 1"></span>
-              <button class="btn sm primary" id="b-print">print()</button>
-              <button class="btn sm" id="b-cancel-upload" disabled>
-                cancel upload
-              </button>
-            </div>
-
-            <pre class="log" id="log">Output appears here.</pre>
-            <p class="small muted">
-              Inline G-code is sent when no file is chosen:
-              <code>G28 / G1 Z5 / M117 hello</code>. The demo only talks to the
-              extension on this page — nothing is sent anywhere else.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section id="install" class="wrap">
-        <h2>Install</h2>
-        <div class="h">
-          Two pieces: the extension, and (for app authors) the shim.
-        </div>
-        <ol class="steps">
-          <li>
-            <strong>Get the extension.</strong> Store listings are on the way.
-            For now, grab a build from
-            <a href="https://github.com/tibordp/prusalink-bridge/releases"
-              >Releases</a
-            >
-            (or build from source) and load it unpacked (<code
-              >chrome://extensions</code
-            >
-            → Developer mode → Load unpacked).
-          </li>
-          <li>
-            <strong>Add your printer</strong> in the extension's options: its
-            LAN address and an API key (or Digest, or none behind a trusted
-            proxy). You grant each host permission at add-time.
-          </li>
-          <li>
-            <strong>App authors:</strong> depend on the shim —
-            <code>npm i @tibordp/prusalink-bridge</code> — and call
-            <code>createBridge()</code>. See the
-            <a
-              href="https://github.com/tibordp/prusalink-bridge/tree/main/packages/client#readme"
-              >client docs</a
-            >.
-          </li>
-        </ol>
-      </section>
-    </main>
+      <pre id="log">Output appears here.</pre>
+    </div>
 
     <footer>
-      <div class="wrap">
-        <div class="disclaimer">
-          <strong>Unofficial.</strong> Not affiliated with or endorsed by Prusa
-          Research. PrusaLink and Prusa are trademarks of Prusa Research a.s.,
-          used here only to describe what the extension talks to.
-        </div>
-        <div>
-          <a href="https://github.com/tibordp/prusalink-bridge">GitHub</a> ·
-          <a href="https://www.npmjs.com/package/@tibordp/prusalink-bridge"
-            >npm</a
-          >
-          · MIT License
-        </div>
-      </div>
+      MIT. PrusaLink and Prusa are trademarks of Prusa Research a.s.
     </footer>
 
     <script type="module" src="./demo.js"></script>

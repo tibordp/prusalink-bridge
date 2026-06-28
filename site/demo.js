@@ -74,7 +74,7 @@ async function detect() {
   } else {
     dot.className = 'statedot err'
     status.textContent =
-      'Extension not detected — install it (see below), then reload this page.'
+      'Extension not detected — install it, then reload this page.'
   }
 }
 
