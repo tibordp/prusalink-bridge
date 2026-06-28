@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/dist/**',
       'extension/.output/**',
       'extension/.wxt/**',
+      'site/lib/**',
     ],
   },
   js.configs.recommended,
@@ -37,7 +38,7 @@ export default tseslint.config(
   },
   // Node scripts and config files run outside the browser.
   {
-    files: ['**/*.config.{js,ts}', 'extension/scripts/**'],
+    files: ['**/*.config.{js,ts}', '**/scripts/**'],
     languageOptions: { globals: { ...globals.node } },
   },
   // JSX compiles to the `el`/`Fragment` factory; tell the parser so it counts

@@ -5,6 +5,8 @@ printers over the LAN — gated by an explicit, per-origin consent prompt. Print
 URLs and credentials live only in the extension; the calling web app never sees
 them.
 
+**[Live demo & overview →](https://tibordp.github.io/prusalink-bridge/)**
+
 > **Unofficial.** This is a community project, not affiliated with or endorsed by
 > Prusa Research. PrusaLink and Prusa are trademarks of Prusa Research a.s.; they
 > are used here only to describe what the extension talks to.
@@ -27,11 +29,11 @@ browser-reported `sender.origin`, never on anything the page sends.
 
 ## Layout (pnpm monorepo)
 
-| Path               | What                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| `extension/`       | The MV3 extension, built with [WXT](https://wxt.dev) (Chrome + Firefox).              |
-| `packages/client/` | `@tibordp/prusalink-bridge` — the zero-dependency page-facing shim, published to npm. |
-| `manual-test/`     | A plain HTML page that exercises the client end-to-end against a real printer.        |
+| Path               | What                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| `extension/`       | The MV3 extension, built with [WXT](https://wxt.dev) (Chrome + Firefox).                   |
+| `packages/client/` | `@tibordp/prusalink-bridge` — the zero-dependency page-facing shim, published to npm.      |
+| `site/`            | Landing page + live demo (deployed to GitHub Pages); also exercises the client end-to-end. |
 
 ## Develop
 
@@ -55,10 +57,12 @@ Load the unpacked build from `extension/.output/chrome-mv3` via
 for the install + security details, and [`packages/client/README.md`](./packages/client/README.md)
 for the page API.
 
-## Manual end-to-end test
+## Demo site
+
+The landing page and interactive demo live in [`site/`](./site/) and deploy to
+GitHub Pages (<https://tibordp.github.io/prusalink-bridge/>). Run it locally:
 
 ```bash
-pnpm build:client
-npx serve .                  # or: python3 -m http.server
-# open http://localhost:3000/manual-test/  (with the extension loaded)
+pnpm build:site              # builds the client and copies it to site/lib/
+npx serve site               # then open the printed URL (with the extension loaded)
 ```

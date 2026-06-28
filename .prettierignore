@@ -3,3 +3,4 @@
 extension/.output/**
 extension/.wxt/**
 pnpm-lock.yaml
+site/lib/

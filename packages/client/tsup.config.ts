@@ -7,4 +7,7 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   target: 'es2020',
+  // Self-contained entry files (no shared chunk) — keeps the published package
+  // simple and lets the demo site import a single `index.js`.
+  splitting: false,
 })

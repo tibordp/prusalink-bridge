@@ -10,3 +10,6 @@ packages/*/dist/
 
 # misc
 .DS_Store
+
+# generated demo-site client bundle
+site/lib/
