@@ -13,3 +13,6 @@ packages/*/dist/
 
 # generated demo-site client bundle
 site/lib/
+
+# CI zip collection
+dist-zips/

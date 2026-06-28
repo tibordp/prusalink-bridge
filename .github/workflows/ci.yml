@@ -45,18 +45,23 @@ jobs:
       - name: Test
         run: pnpm test
 
-      # `wxt zip` builds, then packages. Produces Chrome + Firefox store zips
-      # (plus a Firefox sources zip, which AMO requires for bundled add-ons).
-      - name: Package (Chrome)
-        run: pnpm zip
-
-      - name: Package (Firefox)
-        run: pnpm zip:firefox
+      # `pnpm zip(:firefox)` builds the client, then the extension, then packages
+      # the Chrome + Firefox store zips (plus a Firefox sources zip for AMO).
+      # Collect them into a fixed dir from wherever WXT wrote `.output`; the final
+      # `ls` fails the step loudly (with a listing) if nothing was produced.
+      - name: Package store zips
+        run: |
+          pnpm zip
+          pnpm zip:firefox
+          mkdir -p dist-zips
+          cp extension/.output/*.zip dist-zips/ 2>/dev/null || true
+          cp .output/*.zip dist-zips/ 2>/dev/null || true
+          ls -la dist-zips/*.zip
 
       - name: Upload store zips
         uses: actions/upload-artifact@v4
         with:
           name: extension-zips
-          path: extension/.output/*.zip
+          path: dist-zips/*.zip
           if-no-files-found: error
           retention-days: 14
