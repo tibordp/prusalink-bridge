@@ -50,16 +50,17 @@ so it's reliable). Multiple pending requests queue and are reviewed one at a tim
 
 ## Architecture
 
-| File                                               | Role                                                                                                                                                |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entrypoints/relay.content.ts`                     | Origin-pinning relay between page `postMessage` and the background. Answers `ping` locally. Top frame only.                                         |
-| `entrypoints/background.ts`                        | Consent gate, registry access, PrusaLink orchestration, prompt queue. Replies to the page by `reqId` → tab so it survives service-worker recycling. |
-| `entrypoints/options/`                             | Printer CRUD, host-permission requests, Connection Test, grant management.                                                                          |
-| `entrypoints/popup/`                               | Status + grants + pause-all **and** the consent / per-print confirm prompts (see below).                                                            |
-| `src/ui/consent-view.ts`, `src/ui/confirm-view.ts` | The prompt UIs, rendered inside the popup.                                                                                                          |
-| `src/lib/prusalink.ts`                             | PrusaLink v1 client (+ legacy fallback): probe, status, cancel, upload-and-print.                                                                   |
-| `src/lib/digest.ts`, `src/lib/md5.ts`              | RFC 2617 Digest auth (WebCrypto has no MD5, so a tiny one is bundled).                                                                              |
-| `src/lib/normalize.ts`                             | Firmware status → the page-facing `PrinterStatus` enum.                                                                                             |
+| File                                                 | Role                                                                                                                                                |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entrypoints/relay.content.ts`                       | Origin-pinning relay between page `postMessage` and the background. Answers `ping` locally. Top frame only.                                         |
+| `entrypoints/background.ts`                          | Consent gate, registry access, PrusaLink orchestration, prompt queue. Replies to the page by `reqId` → tab so it survives service-worker recycling. |
+| `entrypoints/options/`                               | Printer CRUD, host-permission requests, Connection Test, grant management.                                                                          |
+| `entrypoints/popup/`                                 | Status + grants + pause-all **and** the consent / per-print confirm prompts (see below).                                                            |
+| `src/ui/consent-view.tsx`, `src/ui/confirm-view.tsx` | The prompt UIs, rendered inside the popup.                                                                                                          |
+| `src/ui/dom.ts`                                      | Tiny classic-JSX runtime (`el` factory + `Fragment`) the UI is written against — compiles JSX to real DOM nodes, no framework.                      |
+| `src/lib/prusalink.ts`                               | PrusaLink v1 client (+ legacy fallback): probe, status, cancel, upload-and-print.                                                                   |
+| `src/lib/digest.ts`, `src/lib/md5.ts`                | RFC 2617 Digest auth (WebCrypto has no MD5, so a tiny one is bundled).                                                                              |
+| `src/lib/normalize.ts`                               | Firmware status → the page-facing `PrinterStatus` enum.                                                                                             |
 
 ## Security notes
 
@@ -68,9 +69,9 @@ so it's reliable). Multiple pending requests queue and are reviewed one at a tim
 - **Credential confinement.** Secrets are written only by the options page and
   read only by the background's PrusaLink client. They never appear in any
   message that can reach a page, nor in error messages.
-- **Least privilege.** No static `host_permissions`; the extension requests an
-  optional permission per printer host at add-time and tolerates out-of-band
-  revocation (`NO_HOST_PERMISSION`).
+- **Least privilege.** The only declared permission is `storage`. No static
+  `host_permissions`; the extension requests an optional permission per printer
+  host at add-time and tolerates out-of-band revocation (`NO_HOST_PERMISSION`).
 - **Storage at rest is NOT encrypted.** `chrome.storage.local` holds your printer
   secrets in the clear. This is acceptable for a self-hosted LAN tool — don't
   reuse a sensitive password. (Stated on the options page too.)
