@@ -24,7 +24,9 @@ export default defineConfig({
     // artifacts like packages/client/dist stay out). Only BUILD.md needs an
     // explicit add since it may not be committed when the zip is produced.
     sourcesRoot: '..',
-    includeSources: ['BUILD.md'],
+    // BUILD.md isn't committed when the zip runs; test files are excluded by
+    // WXT's defaults but we want reviewers to be able to run them.
+    includeSources: ['BUILD.md', '**/*.test.ts'],
     excludeSources: [
       '**/node_modules/**',
       'extension/.output/**',
