@@ -23,11 +23,19 @@ export interface RpcMessage {
   args?: unknown
 }
 
+/** relay → background: abort the in-flight upload for `reqId`. */
+export interface AbortMessage {
+  kind: 'abort'
+  reqId: string
+}
+
 export interface PrintRpcArgs {
   printerId: string
   name: string
   gcode: WireGcode
   start?: boolean
+  /** caller-supplied upload timeout (ms); undefined = no timeout. */
+  timeoutMs?: number
 }
 
 export interface ReplyMessage {
@@ -56,6 +64,11 @@ export interface ConsentPrompt {
   appName?: string
   reason?: string
   printers: PrinterAdminInfo[]
+  /** Printer ids already granted to this origin — pre-checked when re-prompting
+   *  to expand a grant. Empty for a first-time request. */
+  grantedIds: string[]
+  /** Current "confirm each print" setting (defaults the toggle on re-prompt). */
+  confirmEachPrint: boolean
 }
 
 export interface ConfirmPrompt {
@@ -99,7 +112,8 @@ export interface PrinterAdminInfo {
   name: string
   type: 'prusalink'
   baseUrl: string
-  auth: { mode: 'apikey' } | { mode: 'digest'; username: string }
+  auth:
+    { mode: 'none' } | { mode: 'apikey' } | { mode: 'digest'; username: string }
   hasSecret: boolean
   model?: string
   storage?: string
@@ -112,6 +126,7 @@ export interface PrinterDraft {
   name: string
   baseUrl: string
   auth:
+    | { mode: 'none' }
     | { mode: 'apikey'; secret?: string }
     | { mode: 'digest'; username: string; secret?: string }
 }

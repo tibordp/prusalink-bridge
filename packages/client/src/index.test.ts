@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { createBridge, BridgeError } from './index'
 import { SOURCE_CS, SOURCE_PAGE, type RequestEnvelope } from './protocol'
 
@@ -89,8 +89,42 @@ describe('createBridge transport', () => {
     installFakeWindow(() => undefined)
     const bridge = createBridge()
     // @ts-expect-error intentionally missing gcode
-    await expect(bridge.print('p1', { name: 'a.gcode' })).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
+    await expect(bridge.print('p1', { name: 'a.gcode' })).rejects.toMatchObject(
+      {
+        code: 'BAD_REQUEST',
+      },
+    )
+  })
+
+  it('aborts an in-flight print and posts an abort control message', async () => {
+    const seen: Array<RequestEnvelope & { abort?: boolean }> = []
+    // Record every page→relay message and never answer the print, so it stays
+    // pending until the AbortController fires.
+    installFakeWindow((env) => {
+      seen.push(env)
+      return undefined
     })
+    const bridge = createBridge()
+    const ac = new AbortController()
+    const p = bridge.print('p1', {
+      name: 'big.bgcode',
+      gcode: 'G28',
+      timeoutMs: 1234,
+      signal: ac.signal,
+    })
+    ac.abort()
+    await expect(p).rejects.toMatchObject({
+      name: 'BridgeError',
+      code: 'CANCELLED',
+    })
+
+    const printMsg = seen.find((m) => m.method === 'print')
+    expect(printMsg).toBeTruthy()
+    // timeoutMs is forwarded on the wire...
+    expect((printMsg!.args as { timeoutMs?: number }).timeoutMs).toBe(1234)
+    // ...and an abort control message went out for the same reqId.
+    expect(
+      seen.some((m) => m.abort === true && m.reqId === printMsg!.reqId),
+    ).toBe(true)
   })
 })

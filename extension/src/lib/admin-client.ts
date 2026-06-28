@@ -14,7 +14,8 @@ import type { PrinterStatus } from './types'
  * admin channel. Surfaces the background's WireError as a thrown Error.
  */
 async function call<T>(msg: AdminMessage): Promise<T> {
-  const res = (await browser.runtime.sendMessage(msg)) as AdminResponse<T> | undefined
+  const res = (await browser.runtime.sendMessage(msg)) as
+    AdminResponse<T> | undefined
   if (!res) throw new Error('No response from background')
   if (!res.ok) {
     const err = new Error(res.error?.message ?? 'Request failed') as Error & {

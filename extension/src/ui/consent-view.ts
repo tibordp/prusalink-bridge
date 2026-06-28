@@ -16,6 +16,12 @@ export function renderConsent(
   ctx: ConsentPrompt,
   onDecide: (choice: ConsentChoice) => void,
 ): HTMLElement {
+  // On a first request, pre-check everything (one-click "grant all"). On a
+  // re-prompt to expand an existing grant, pre-check only what's already granted.
+  const isExpansion = ctx.grantedIds.length > 0
+  const granted = new Set(ctx.grantedIds)
+  const preChecked = (id: string) => (isExpansion ? granted.has(id) : true)
+
   const checks = new Map<string, HTMLInputElement>()
   const printerList = el('div', {})
   if (ctx.printers.length === 0) {
@@ -32,7 +38,7 @@ export function renderConsent(
       type: 'checkbox',
       id: `pk_${p.id}`,
     }) as HTMLInputElement
-    cb.checked = true
+    cb.checked = preChecked(p.id)
     checks.set(p.id, cb)
     printerList.append(
       el(
@@ -57,7 +63,7 @@ export function renderConsent(
     type: 'checkbox',
     id: 'confirm-each',
   }) as HTMLInputElement
-  confirmEach.checked = true
+  confirmEach.checked = ctx.confirmEachPrint
 
   let decided = false
   const decide = (allow: boolean): void => {
@@ -84,14 +90,20 @@ export function renderConsent(
   return el(
     'div',
     {},
-    el('h1', {}, 'Allow printer access?'),
+    el(
+      'h1',
+      {},
+      isExpansion ? 'Update printer access?' : 'Allow printer access?',
+    ),
     el(
       'div',
       { class: 'card' },
       el(
         'div',
         { class: 'small muted' },
-        'This site is asking to use your printers:',
+        isExpansion
+          ? 'This site is asking to update which printers it can use:'
+          : 'This site is asking to use your printers:',
       ),
       el(
         'div',

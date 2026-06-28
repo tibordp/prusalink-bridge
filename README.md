@@ -27,11 +27,11 @@ keys on the browser-reported `sender.origin`.
 
 ## Layout (pnpm monorepo)
 
-| Path | What |
-|---|---|
-| `extension/` | The MV3 extension, built with [WXT](https://wxt.dev) (Chrome + Firefox). |
+| Path               | What                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `extension/`       | The MV3 extension, built with [WXT](https://wxt.dev) (Chrome + Firefox).              |
 | `packages/client/` | `@tibordp/prusalink-bridge` — the zero-dependency page-facing shim, published to npm. |
-| `manual-test/` | A plain HTML page that exercises the client end-to-end against a real printer. |
+| `manual-test/`     | A plain HTML page that exercises the client end-to-end against a real printer.        |
 
 ## Develop
 
@@ -51,7 +51,7 @@ pnpm -r typecheck
 ```
 
 Load the unpacked build from `extension/.output/chrome-mv3` via
-`chrome://extensions` → *Load unpacked*. See [`extension/README.md`](./extension/README.md)
+`chrome://extensions` → _Load unpacked_. See [`extension/README.md`](./extension/README.md)
 for the install + security details, and [`packages/client/README.md`](./packages/client/README.md)
 for the page API.
 

@@ -19,21 +19,48 @@ function rol(n: number, c: number): number {
   return (n << c) | (n >>> (32 - c))
 }
 
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 function md5cycle(x: Int32Array, k: Int32Array): void {
   let a = x[0]!
   let b = x[1]!
   let c = x[2]!
   let d = x[3]!
 
-  const ff = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
-    add32(rol(add32(add32(a, (b & c) | (~b & d)), add32(x, t)), s), b)
-  const gg = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
-    add32(rol(add32(add32(a, (b & d) | (c & ~d)), add32(x, t)), s), b)
-  const hh = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
-    add32(rol(add32(add32(a, b ^ c ^ d), add32(x, t)), s), b)
-  const ii = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
-    add32(rol(add32(add32(a, c ^ (b | ~d)), add32(x, t)), s), b)
+  const ff = (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ) => add32(rol(add32(add32(a, (b & c) | (~b & d)), add32(x, t)), s), b)
+  const gg = (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ) => add32(rol(add32(add32(a, (b & d) | (c & ~d)), add32(x, t)), s), b)
+  const hh = (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ) => add32(rol(add32(add32(a, b ^ c ^ d), add32(x, t)), s), b)
+  const ii = (
+    a: number,
+    b: number,
+    c: number,
+    d: number,
+    x: number,
+    s: number,
+    t: number,
+  ) => add32(rol(add32(add32(a, c ^ (b | ~d)), add32(x, t)), s), b)
 
   a = ff(a, b, c, d, k[0]!, 7, -680876936)
   d = ff(d, a, b, c, k[1]!, 12, -389564586)
@@ -111,7 +138,9 @@ function md5cycle(x: Int32Array, k: Int32Array): void {
 
 function md51(bytes: Uint8Array): Int32Array {
   const n = bytes.length
-  const state = Int32Array.from([1732584193, -271733879, -1732584194, 271733878])
+  const state = Int32Array.from([
+    1732584193, -271733879, -1732584194, 271733878,
+  ])
   let i: number
   const tail = new Int32Array(16)
   for (i = 64; i <= n; i += 64) {
@@ -121,9 +150,9 @@ function md51(bytes: Uint8Array): Int32Array {
   tail.fill(0)
   let j: number
   for (j = 0; j < rest.length; j++) {
-    tail[j >> 2]! |= rest[j]! << (j % 4 << 3)
+    tail[j >> 2]! |= rest[j]! << ((j % 4) << 3)
   }
-  tail[j >> 2]! |= 0x80 << (j % 4 << 3)
+  tail[j >> 2]! |= 0x80 << ((j % 4) << 3)
   if (j > 55) {
     md5cycle(state, tail)
     tail.fill(0)
@@ -159,7 +188,6 @@ function toHex(words: Int32Array): string {
   }
   return out
 }
-/* eslint-enable @typescript-eslint/no-non-null-assertion */
 
 /** MD5 of a UTF-8 string, as lowercase hex. */
 export function md5(str: string): string {

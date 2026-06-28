@@ -87,6 +87,7 @@ export function buildDigestHeader(p: BuildDigestParams): string {
     parts.push(`qop=${qop}`, `nc=${nc}`, `cnonce="${cnonce}"`)
   }
   if (challenge.opaque != null) parts.push(`opaque="${challenge.opaque}"`)
-  if (challenge.algorithm != null) parts.push(`algorithm=${challenge.algorithm}`)
+  if (challenge.algorithm != null)
+    parts.push(`algorithm=${challenge.algorithm}`)
   return `Digest ${parts.join(', ')}`
 }

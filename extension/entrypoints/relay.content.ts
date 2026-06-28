@@ -38,8 +38,18 @@ export default defineContentScript({
       window.postMessage(resp, window.location.origin)
     }
 
-    function reply(reqId: string, ok: boolean, result?: unknown, error?: WireError) {
-      postToPage({ source: SOURCE_CS, reqId, ok, ...(ok ? { result } : { error }) })
+    function reply(
+      reqId: string,
+      ok: boolean,
+      result?: unknown,
+      error?: WireError,
+    ) {
+      postToPage({
+        source: SOURCE_CS,
+        reqId,
+        ok,
+        ...(ok ? { result } : { error }),
+      })
     }
 
     // ── page → relay ──────────────────────────────────────────────────────
@@ -48,10 +58,22 @@ export default defineContentScript({
       if (event.source !== window) return
       if (event.origin !== window.location.origin) return
       const data = event.data as RequestEnvelope | undefined
-      if (!data || data.source !== SOURCE_PAGE || typeof data.reqId !== 'string') {
+      if (
+        !data ||
+        data.source !== SOURCE_PAGE ||
+        typeof data.reqId !== 'string'
+      ) {
         return
       }
       const { reqId, method } = data
+
+      // Control message: abort the in-flight upload for this reqId.
+      if ((data as { abort?: boolean }).abort === true) {
+        void browser.runtime
+          .sendMessage({ kind: 'abort', reqId })
+          .catch(() => undefined)
+        return
+      }
 
       // Discovery is answered locally so it works even while the SW sleeps.
       if (method === 'ping') {
@@ -82,6 +104,7 @@ export default defineContentScript({
             name?: string
             gcode?: string | Blob | ArrayBuffer
             start?: boolean
+            timeoutMs?: number
           }
           if (!a.printerId || !a.name || a.gcode == null) {
             reply(reqId, false, undefined, {
@@ -96,6 +119,7 @@ export default defineContentScript({
             name: a.name,
             gcode: wire,
             start: a.start,
+            timeoutMs: a.timeoutMs,
           } satisfies PrintRpcArgs
         }
         const msg: RpcMessage = {

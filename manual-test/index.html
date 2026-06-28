@@ -6,7 +6,9 @@
     <title>PrusaLink Bridge — manual test</title>
     <style>
       body {
-        font: 14px/1.5 system-ui, sans-serif;
+        font:
+          14px/1.5 system-ui,
+          sans-serif;
         max-width: 680px;
         margin: 40px auto;
         padding: 0 16px;
@@ -76,6 +78,7 @@
       <button id="available">available()</button>
       <button id="version">version()</button>
       <button id="request" class="primary">requestAccess()</button>
+      <button id="request-force">requestAccess(force)</button>
       <button id="printers">printers()</button>
     </div>
 
@@ -87,27 +90,46 @@
       <button id="cancel">cancel()</button>
     </div>
 
-    <label>File name</label>
+    <label
+      >File to upload (optional — for binary <code>.bgcode</code> or any
+      file)</label
+    >
+    <input type="file" id="file" />
+
+    <label>File name on printer</label>
     <input id="filename" value="manual-test.gcode" />
-    <label>G-code</label>
-    <textarea id="gcode" rows="5">
+
+    <label>…or inline G-code (used only when no file is picked)</label>
+    <textarea id="gcode" rows="4">
 G28
 G1 Z5 F300
 M117 Bridge manual test
 </textarea>
+
     <div class="row">
-      <label class="grow"
+      <label style="width: auto; white-space: nowrap"
         ><input type="checkbox" id="start" checked style="width: auto" /> start
         immediately</label
       >
+      <label class="grow"
+        >timeout ms (blank = none)
+        <input id="timeout" type="number" min="0" placeholder="none"
+      /></label>
+    </div>
+    <div class="row">
       <button id="print" class="primary">print()</button>
+      <button id="cancel-upload" disabled>cancel upload</button>
+      <span id="upstatus" class="grow"></span>
     </div>
 
     <h3>Log</h3>
     <pre id="log"></pre>
 
     <script type="module">
-      import { createBridge, BridgeError } from '../packages/client/dist/index.js'
+      import {
+        createBridge,
+        BridgeError,
+      } from '../packages/client/dist/index.js'
 
       const bridge = createBridge()
       const logEl = document.getElementById('log')
@@ -142,32 +164,71 @@ M117 Bridge manual test
       document.getElementById('version').onclick = run('version', () =>
         bridge.version(),
       )
-      document.getElementById('request').onclick = run('requestAccess', async () => {
-        const printers = await bridge.requestAccess({
-          appName: 'Manual Test',
-          reason: 'exercise the bridge end-to-end',
+      const doRequest = (force) =>
+        run(force ? 'requestAccess(force)' : 'requestAccess', async () => {
+          const printers = await bridge.requestAccess({
+            appName: 'Manual Test',
+            reason: 'exercise the bridge end-to-end',
+            force,
+          })
+          fillPrinters(printers)
+          return printers
         })
-        fillPrinters(printers)
-        return printers
-      })
-      document.getElementById('printers').onclick = run('printers', async () => {
-        const printers = await bridge.printers()
-        fillPrinters(printers)
-        return printers
-      })
+      document.getElementById('request').onclick = doRequest(false)
+      document.getElementById('request-force').onclick = doRequest(true)
+      document.getElementById('printers').onclick = run(
+        'printers',
+        async () => {
+          const printers = await bridge.printers()
+          fillPrinters(printers)
+          return printers
+        },
+      )
       document.getElementById('status').onclick = run('status', () =>
         bridge.status(sel.value),
       )
       document.getElementById('cancel').onclick = run('cancel', () =>
         bridge.cancel(sel.value),
       )
-      document.getElementById('print').onclick = run('print', () =>
-        bridge.print(sel.value, {
-          name: document.getElementById('filename').value,
-          gcode: document.getElementById('gcode').value,
-          start: document.getElementById('start').checked,
-        }),
-      )
+      // When a file is chosen, default the on-printer name to the file's name.
+      const fileInput = document.getElementById('file')
+      const nameInput = document.getElementById('filename')
+      fileInput.onchange = () => {
+        if (fileInput.files[0]) nameInput.value = fileInput.files[0].name
+      }
+
+      const upstatus = document.getElementById('upstatus')
+      const cancelUploadBtn = document.getElementById('cancel-upload')
+      let uploadAbort = null
+
+      cancelUploadBtn.onclick = () => uploadAbort && uploadAbort.abort()
+
+      document.getElementById('print').onclick = async () => {
+        const file = fileInput.files[0]
+        // A picked file (Blob) is uploaded verbatim — works for binary .bgcode.
+        const gcode = file ? file : document.getElementById('gcode').value
+        const tv = document.getElementById('timeout').value
+        uploadAbort = new AbortController()
+        cancelUploadBtn.disabled = false
+        upstatus.textContent = 'uploading…'
+        try {
+          const res = await bridge.print(sel.value, {
+            name: nameInput.value,
+            gcode,
+            start: document.getElementById('start').checked,
+            timeoutMs: tv ? Number(tv) : undefined,
+            signal: uploadAbort.signal,
+          })
+          upstatus.textContent = 'done'
+          log('print', res)
+        } catch (e) {
+          upstatus.textContent = e instanceof BridgeError ? e.code : 'error'
+          log('print (error)', e)
+        } finally {
+          cancelUploadBtn.disabled = true
+          uploadAbort = null
+        }
+      }
     </script>
   </body>
 </html>

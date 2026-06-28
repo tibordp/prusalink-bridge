@@ -32,7 +32,9 @@ export async function getPrinters(): Promise<PrinterRecord[]> {
   return (await readLocal()).printers
 }
 
-export async function getPrinter(id: string): Promise<PrinterRecord | undefined> {
+export async function getPrinter(
+  id: string,
+): Promise<PrinterRecord | undefined> {
   return (await getPrinters()).find((p) => p.id === id)
 }
 
@@ -138,7 +140,9 @@ export async function putPending(reqId: string, op: PendingOp): Promise<void> {
   await browser.storage.session.set({ pending })
 }
 
-export async function getPending(reqId: string): Promise<PendingOp | undefined> {
+export async function getPending(
+  reqId: string,
+): Promise<PendingOp | undefined> {
   return (await readPending())[reqId]
 }
 
@@ -153,4 +157,3 @@ export async function takePending(
   }
   return op
 }
-

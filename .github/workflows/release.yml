@@ -1,0 +1,46 @@
+name: Release (npm)
+
+# Publishes @tibordp/prusalink-bridge to npm when a GitHub Release is published.
+# The release tag should match the version in packages/client/package.json.
+#
+# Auth is via npm OIDC "trusted publishing" — no NPM_TOKEN secret, nothing to
+# rotate. One-time setup on npmjs.com: package → Settings → Trusted Publisher →
+# add this repo + workflow (release.yml). Provenance is attached automatically.
+#
+# Bootstrapping: trusted publishing can only be configured on a package that
+# already exists, so the very first publish must be done manually
+# (`npm publish` while logged in). Every release after that runs here, tokenless.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC trusted publishing + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build client shim
+        run: pnpm build:client
+
+      # OIDC trusted publishing needs npm >= 11.5.1; Node 22 ships an older npm.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Publish to npm (OIDC, tokenless)
+        run: npm publish --provenance --access public
+        working-directory: packages/client

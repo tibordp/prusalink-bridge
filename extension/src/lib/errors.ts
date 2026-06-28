@@ -1,4 +1,7 @@
-import type { BridgeErrorCode, WireError } from '@tibordp/prusalink-bridge/protocol'
+import type {
+  BridgeErrorCode,
+  WireError,
+} from '@tibordp/prusalink-bridge/protocol'
 
 /**
  * Internal error type used throughout the background. Carries a page-safe

@@ -81,12 +81,15 @@ export function normalizeV1Status(
       ...(progress != null ? { progress } : {}),
       ...(timeRemainingS != null ? { timeRemainingS } : {}),
     }
-    if (Object.keys(jobOut).length === 0) jobOut = state === 'printing' ? {} : null
+    if (Object.keys(jobOut).length === 0)
+      jobOut = state === 'printing' ? {} : null
   }
 
   return {
     state,
-    ...(num(printer.temp_nozzle) != null ? { tempNozzle: printer.temp_nozzle } : {}),
+    ...(num(printer.temp_nozzle) != null
+      ? { tempNozzle: printer.temp_nozzle }
+      : {}),
     ...(num(printer.temp_bed) != null ? { tempBed: printer.temp_bed } : {}),
     job: jobOut,
     raw: status,
@@ -119,7 +122,8 @@ export function normalizeLegacyStatus(
       ...(progress != null ? { progress } : {}),
       ...(timeRemainingS != null ? { timeRemainingS } : {}),
     }
-    if (Object.keys(jobOut).length === 0) jobOut = state === 'printing' ? {} : null
+    if (Object.keys(jobOut).length === 0)
+      jobOut = state === 'printing' ? {} : null
   }
   return {
     state,

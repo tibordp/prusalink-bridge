@@ -6,7 +6,6 @@
  */
 
 import {
-  PROTOCOL_VERSION,
   SOURCE_CS,
   SOURCE_PAGE,
   type BridgeErrorCode,
@@ -17,7 +16,6 @@ import {
   type PrinterStatus,
   type RequestEnvelope,
   type ResponseEnvelope,
-  type WireError,
 } from './protocol'
 
 export type {
@@ -50,11 +48,16 @@ export interface PrusaLinkBridge {
   /**
    * Trigger the consent prompt (must be called from a user gesture). Resolves
    * with the printers the user granted to this origin, or throws DENIED. Returns
-   * immediately (no prompt) if a grant already exists.
+   * immediately (no prompt) if a grant already exists — unless `force` is set,
+   * which always reopens the prompt (with current picks pre-checked) so the user
+   * can add or remove printers.
    */
   requestAccess(opts?: {
     appName?: string
     reason?: string
+    /** Always show the consent prompt, even if a grant already exists. Use this
+     *  to let the user grant access to additional printers. */
+    force?: boolean
   }): Promise<PrinterInfo[]>
   /** Printers already granted to this origin; [] if none. No prompt. */
   printers(): Promise<PrinterInfo[]>
@@ -126,6 +129,7 @@ class Bridge implements PrusaLinkBridge {
     method: Method,
     args?: unknown,
     timeoutMs?: number,
+    signal?: AbortSignal,
   ): Promise<T> {
     this.ensureListener()
     const reqId = randomId()
@@ -142,30 +146,62 @@ class Bridge implements PrusaLinkBridge {
         timer = setTimeout(() => {
           if (!this.pending.has(reqId)) return
           this.pending.delete(reqId)
-          reject(
-            new BridgeError('TIMEOUT', `Bridge "${method}" timed out`),
-          )
+          reject(new BridgeError('TIMEOUT', `Bridge "${method}" timed out`))
         }, effectiveTimeout)
       }
+
+      const settle = (fn: () => void) => {
+        if (!this.pending.has(reqId)) return
+        this.pending.delete(reqId)
+        if (timer) clearTimeout(timer)
+        fn()
+      }
+
       this.pending.set(reqId, {
         resolve: resolve as (r: unknown) => void,
         reject,
         timer,
       })
+
+      // Caller-driven cancel: tell the background to abort, reject locally now.
+      if (signal) {
+        const onAbort = () =>
+          settle(() => {
+            this.postAbort(reqId)
+            reject(new BridgeError('CANCELLED', 'Request aborted'))
+          })
+        if (signal.aborted) {
+          onAbort()
+          return
+        }
+        signal.addEventListener('abort', onAbort, { once: true })
+      }
+
       try {
         // Same-window, same-origin post; the relay validates and forwards.
         window.postMessage(envelope, window.location.origin)
       } catch (err) {
-        this.pending.delete(reqId)
-        if (timer) clearTimeout(timer)
-        reject(
-          new BridgeError(
-            'INTERNAL',
-            'Failed to post message: ' + String(err),
+        settle(() =>
+          reject(
+            new BridgeError(
+              'INTERNAL',
+              'Failed to post message: ' + String(err),
+            ),
           ),
         )
       }
     })
+  }
+
+  private postAbort(reqId: string): void {
+    try {
+      window.postMessage(
+        { source: SOURCE_PAGE, reqId, abort: true },
+        window.location.origin,
+      )
+    } catch {
+      // best-effort — the page is going away anyway
+    }
   }
 
   async available(timeoutMs = 300): Promise<boolean> {
@@ -189,10 +225,12 @@ class Bridge implements PrusaLinkBridge {
   requestAccess(opts?: {
     appName?: string
     reason?: string
+    force?: boolean
   }): Promise<PrinterInfo[]> {
     return this.send<PrinterInfo[]>('requestAccess', {
       appName: opts?.appName,
       reason: opts?.reason,
+      force: opts?.force,
     })
   }
 
@@ -206,12 +244,18 @@ class Bridge implements PrusaLinkBridge {
         new BridgeError('BAD_REQUEST', 'print requires printerId, name, gcode'),
       )
     }
-    return this.send<{ jobId?: string }>('print', {
-      printerId,
-      name: args.name,
-      gcode: args.gcode,
-      start: args.start,
-    })
+    return this.send<{ jobId?: string }>(
+      'print',
+      {
+        printerId,
+        name: args.name,
+        gcode: args.gcode,
+        start: args.start,
+        timeoutMs: args.timeoutMs,
+      },
+      undefined,
+      args.signal,
+    )
   }
 
   status(printerId: string): Promise<PrinterStatus> {

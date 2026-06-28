@@ -2,6 +2,7 @@
   "name": "prusalink-bridge-monorepo",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "description": "PrusaLink Bridge — browser extension + client shim that let web apps drive your own PrusaLink printers over the LAN, gated by per-origin consent.",
   "scripts": {
     "dev": "pnpm --filter prusalink-bridge-extension dev",
@@ -11,11 +12,24 @@
     "build:firefox": "pnpm --filter prusalink-bridge-extension build:firefox",
     "build:client": "pnpm --filter @tibordp/prusalink-bridge build",
     "zip": "pnpm --filter prusalink-bridge-extension zip",
+    "zip:firefox": "pnpm --filter prusalink-bridge-extension zip:firefox",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "pnpm@11.8.0"
+  "packageManager": "pnpm@11.8.0",
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^9.1.2",
+    "globals": "^15.15.0",
+    "prettier": "^3.9.0",
+    "typescript-eslint": "^8.62.0"
+  }
 }

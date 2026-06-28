@@ -22,7 +22,11 @@ function renderPrinters(): void {
   clear(root)
   if (!state || state.printers.length === 0) {
     root.append(
-      el('div', { class: 'card muted small' }, 'No printers yet. Add one below.'),
+      el(
+        'div',
+        { class: 'card muted small' },
+        'No printers yet. Add one below.',
+      ),
     )
     return
   }
@@ -34,7 +38,11 @@ function printerCard(p: PrinterAdminInfo): HTMLElement {
     ? el('span', { class: 'pill ok' }, 'reachable')
     : el('span', { class: 'pill warn' }, 'permission needed')
   const authLabel =
-    p.auth.mode === 'digest' ? `Digest (${p.auth.username})` : 'API key'
+    p.auth.mode === 'digest'
+      ? `Digest (${p.auth.username})`
+      : p.auth.mode === 'none'
+        ? 'No auth'
+        : 'API key'
 
   return el(
     'div',
@@ -84,7 +92,11 @@ async function testPrinter(p: PrinterAdminInfo): Promise<void> {
     // Ensure we hold the host permission (gesture-driven request).
     const granted = await requestHostPermission(p.baseUrl)
     if (!granted) {
-      setCardToast(p.id, 'Permission to reach this host was not granted.', 'err')
+      setCardToast(
+        p.id,
+        'Permission to reach this host was not granted.',
+        'err',
+      )
       return
     }
     const res = await admin.probe(p.id)
@@ -100,7 +112,9 @@ async function testPrinter(p: PrinterAdminInfo): Promise<void> {
 }
 
 async function deletePrinter(p: PrinterAdminInfo): Promise<void> {
-  if (!confirm(`Delete printer "${p.name}"? Sites granted to it will lose it.`)) {
+  if (
+    !confirm(`Delete printer "${p.name}"? Sites granted to it will lose it.`)
+  ) {
     return
   }
   await admin.deletePrinter(p.id)
@@ -128,6 +142,7 @@ function openEditor(p?: PrinterAdminInfo): void {
     {},
     el('option', { value: 'apikey' }, 'API key (recommended)'),
     el('option', { value: 'digest' }, 'HTTP Digest'),
+    el('option', { value: 'none' }, 'None (behind a trusted proxy)'),
   ) as HTMLSelectElement
   mode.value = p?.auth.mode ?? 'apikey'
 
@@ -148,36 +163,49 @@ function openEditor(p?: PrinterAdminInfo): void {
     placeholder: p?.hasSecret ? '•••••• (leave blank to keep)' : '',
     autocomplete: 'off',
   }) as HTMLInputElement
-
-  const secretHelp = el(
+  const secretWrap = el(
     'div',
-    { class: 'small muted' },
-    'API key is shown in your printer’s PrusaLink settings. For Digest, the MK4 uses username “maker”.',
+    {},
+    el('label', {}, 'Secret'),
+    secret,
+    el(
+      'div',
+      { class: 'small muted' },
+      'API key is shown in your printer’s PrusaLink settings. For Digest, the MK4 uses username “maker”.',
+    ),
   )
 
   const toast = el('div', { class: 'toast' })
 
   function syncMode(): void {
     usernameWrap.style.display = mode.value === 'digest' ? 'block' : 'none'
+    secretWrap.style.display = mode.value === 'none' ? 'none' : 'block'
   }
   mode.addEventListener('change', syncMode)
   syncMode()
 
   function readForm(): PrinterDraft {
-    const base: PrinterDraft = {
+    let auth: PrinterDraft['auth']
+    if (mode.value === 'none') {
+      auth = { mode: 'none' }
+    } else if (mode.value === 'digest') {
+      auth = {
+        mode: 'digest',
+        username: username.value,
+        ...(secret.value ? { secret: secret.value } : {}),
+      }
+    } else {
+      auth = {
+        mode: 'apikey',
+        ...(secret.value ? { secret: secret.value } : {}),
+      }
+    }
+    return {
       ...(editing?.id ? { id: editing.id } : {}),
       name: name.value,
       baseUrl: baseUrl.value,
-      auth:
-        mode.value === 'digest'
-          ? {
-              mode: 'digest',
-              username: username.value,
-              ...(secret.value ? { secret: secret.value } : {}),
-            }
-          : { mode: 'apikey', ...(secret.value ? { secret: secret.value } : {}) },
+      auth,
     }
-    return base
   }
 
   function validate(draft: PrinterDraft): string | null {
@@ -187,8 +215,10 @@ function openEditor(p?: PrinterAdminInfo): void {
     } catch {
       return 'Base URL must look like http://192.168.1.50'
     }
+    if (draft.auth.mode === 'none') return null
     const needsSecret = !editing?.id || !p?.hasSecret
-    if (needsSecret && !secret.value) return 'A secret (API key / password) is required.'
+    if (needsSecret && !secret.value)
+      return 'A secret (API key / password) is required.'
     return null
   }
 
@@ -198,8 +228,11 @@ function openEditor(p?: PrinterAdminInfo): void {
     if (err) return void setToast(toast, err, 'err')
     setToast(toast, 'Testing…', 'ok')
     try {
-      const granted = await requestHostPermission(normalizeBaseUrl(draft.baseUrl))
-      if (!granted) return void setToast(toast, 'Host permission not granted.', 'err')
+      const granted = await requestHostPermission(
+        normalizeBaseUrl(draft.baseUrl),
+      )
+      if (!granted)
+        return void setToast(toast, 'Host permission not granted.', 'err')
       const res = await admin.probeDraft(draft)
       const bits = [
         res.model ? `model ${res.model}` : null,
@@ -217,7 +250,9 @@ function openEditor(p?: PrinterAdminInfo): void {
     if (err) return void setToast(toast, err, 'err')
     try {
       // Request the host permission first, while the click gesture is live.
-      const granted = await requestHostPermission(normalizeBaseUrl(draft.baseUrl))
+      const granted = await requestHostPermission(
+        normalizeBaseUrl(draft.baseUrl),
+      )
       await admin.savePrinter(draft)
       closeEditor()
       await refresh()
@@ -249,9 +284,7 @@ function openEditor(p?: PrinterAdminInfo): void {
       el('label', {}, 'Authentication'),
       mode,
       usernameWrap,
-      el('label', {}, 'Secret'),
-      secret,
-      secretHelp,
+      secretWrap,
       el(
         'div',
         { class: 'actions' },
@@ -277,7 +310,11 @@ function renderGrants(): void {
   const entries = Object.entries(state?.grants ?? {})
   if (entries.length === 0) {
     root.append(
-      el('div', { class: 'card muted small' }, 'No sites have been granted access.'),
+      el(
+        'div',
+        { class: 'card muted small' },
+        'No sites have been granted access.',
+      ),
     )
     return
   }
@@ -294,7 +331,9 @@ function renderGrants(): void {
             'div',
             { class: 'small muted' },
             `${g.printerIds.length} printer(s) · ${
-              g.confirmEachPrint ? 'confirms each print' : 'prints without confirm'
+              g.confirmEachPrint
+                ? 'confirms each print'
+                : 'prints without confirm'
             }`,
           ),
         ),
@@ -328,7 +367,9 @@ function describeError(err: unknown): string {
   return `${code}${e?.message ?? 'Something went wrong'}`
 }
 
-document.getElementById('add-printer')!.addEventListener('click', () => openEditor())
+document
+  .getElementById('add-printer')!
+  .addEventListener('click', () => openEditor())
 document.getElementById('pause-all')!.addEventListener('change', async (e) => {
   await admin.setPauseAll((e.target as HTMLInputElement).checked)
 })

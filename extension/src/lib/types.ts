@@ -3,10 +3,16 @@ import type {
   PrinterStatus,
 } from '@tibordp/prusalink-bridge/protocol'
 
-export type { PrinterInfo, PrinterStatus, PrinterState } from '@tibordp/prusalink-bridge/protocol'
+export type {
+  PrinterInfo,
+  PrinterStatus,
+  PrinterState,
+} from '@tibordp/prusalink-bridge/protocol'
 
-/** Auth config for a printer. Secrets live ONLY here. */
+/** Auth config for a printer. Secrets live ONLY here. `none` sends no auth —
+ *  unsupported by stock PrusaLink, but useful behind a trusted auth proxy. */
 export type AuthConfig =
+  | { mode: 'none' }
   | { mode: 'apikey'; secret: string }
   | { mode: 'digest'; username: string; secret: string }
 

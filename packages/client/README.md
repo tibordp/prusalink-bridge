@@ -51,29 +51,45 @@ createBridge(): PrusaLinkBridge
 interface PrusaLinkBridge {
   available(timeoutMs?: number): Promise<boolean>       // ping/pong, never throws
   version(): Promise<string | null>                     // extension protocol version
-  requestAccess(opts?: { appName?; reason? }): Promise<PrinterInfo[]>
+  requestAccess(opts?: { appName?; reason?; force? }): Promise<PrinterInfo[]>
   printers(): Promise<PrinterInfo[]>                     // already-granted printers, no prompt
-  print(printerId, { name, gcode, start? }): Promise<{ jobId? }>
+  print(printerId, { name, gcode, start?, signal?, timeoutMs? }): Promise<{ jobId? }>
   status(printerId): Promise<PrinterStatus>
   cancel(printerId): Promise<void>
 }
 ```
 
-`gcode` may be a `string`, `Blob`, or `ArrayBuffer`. Errors are thrown as
-`BridgeError` with a `code`:
+`gcode` may be a `string`, `Blob`, or `ArrayBuffer` — pass a `Blob`/`ArrayBuffer`
+for binary `.bgcode`; the bytes are uploaded verbatim. `print()` extras:
+
+- `signal?: AbortSignal` — abort the upload; the promise rejects with `CANCELLED`.
+- `timeoutMs?: number` — upload timeout. **Default: none** (Prusa firmware can be
+  slow to ingest a file, and the link may be slow).
+
+```ts
+const ac = new AbortController()
+cancelButton.onclick = () => ac.abort()
+await bridge.print(id, { name: 'part.bgcode', gcode: file, signal: ac.signal })
+```
+
+Errors are thrown as `BridgeError` with a `code`:
 
 `NOT_INSTALLED · DENIED · NOT_GRANTED · NO_HOST_PERMISSION · PRINTER_UNREACHABLE ·
 AUTH_FAILED · PRINTER_BUSY · CANCELLED · HTTP_ERROR · TIMEOUT · BAD_REQUEST ·
 INTERNAL`
 
 Map these to friendly UI (`DENIED` → "Permission needed", `PRINTER_UNREACHABLE` →
-"Couldn't reach the printer", …). `print()` has no client-side timeout because it
-includes an upload and a possible confirm prompt.
+"Couldn't reach the printer", …). `print()` has no client-side timeout (the
+upload can be long); use `signal`/`timeoutMs` to bound it.
 
 ## Notes
 
 - `requestAccess()` must run inside a user gesture so the consent prompt is
   allowed to open.
+- `requestAccess()` returns the already-granted printers **without** prompting if
+  a grant exists. To let the user grant **additional** printers (e.g. they added
+  a new one), call `requestAccess({ force: true })` — the prompt reopens with the
+  current selection pre-checked.
 - The shim filters incoming messages to `event.source === window`,
   `event.origin === location.origin`, and the relay's `source` tag, then resolves
   by `reqId`.

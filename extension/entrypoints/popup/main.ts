@@ -107,7 +107,9 @@ function renderPrinters(): void {
   const root = document.getElementById('printers')!
   clear(root)
   if (!state || state.printers.length === 0) {
-    root.append(el('div', { class: 'card muted small' }, 'No printers configured.'))
+    root.append(
+      el('div', { class: 'card muted small' }, 'No printers configured.'),
+    )
     return
   }
   for (const p of state.printers) root.append(printerCard(p))
@@ -121,7 +123,11 @@ function printerCard(p: PrinterAdminInfo): HTMLElement {
       'div',
       { class: 'row between' },
       el('div', { class: 'strong truncate grow' }, p.name),
-      el('span', { class: 'pill', dataset: { state: p.id } }, p.hasPermission ? '—' : 'no perm'),
+      el(
+        'span',
+        { class: 'pill', dataset: { state: p.id } },
+        p.hasPermission ? '—' : 'no perm',
+      ),
     ),
     el('div', { class: 'small muted', dataset: { detail: p.id } }, p.baseUrl),
   )
@@ -153,7 +159,8 @@ function paintStatus(id: string, st: PrinterStatus): void {
     const bits: string[] = []
     if (st.tempNozzle != null) bits.push(`nozzle ${Math.round(st.tempNozzle)}°`)
     if (st.tempBed != null) bits.push(`bed ${Math.round(st.tempBed)}°`)
-    if (st.job?.progress != null) bits.push(`${Math.round(st.job.progress * 100)}%`)
+    if (st.job?.progress != null)
+      bits.push(`${Math.round(st.job.progress * 100)}%`)
     if (st.job?.name) bits.push(st.job.name)
     detail.textContent = bits.join(' · ') || '—'
   }
@@ -187,7 +194,11 @@ function renderGrants(): void {
           'div',
           { class: 'grow' },
           el('div', { class: 'mono small truncate' }, origin),
-          el('div', { class: 'small muted' }, `${g.printerIds.length} printer(s)`),
+          el(
+            'div',
+            { class: 'small muted' },
+            `${g.printerIds.length} printer(s)`,
+          ),
         ),
         el(
           'button',

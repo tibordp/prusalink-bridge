@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pnpm version comes from the root package.json "packageManager" field.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The extension imports the client's built types, so build it first.
+      - name: Build client shim
+        run: pnpm build:client
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      # `wxt zip` builds, then packages. Produces Chrome + Firefox store zips
+      # (plus a Firefox sources zip, which AMO requires for bundled add-ons).
+      - name: Package (Chrome)
+        run: pnpm zip
+
+      - name: Package (Firefox)
+        run: pnpm zip:firefox
+
+      - name: Upload store zips
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zips
+          path: extension/.output/*.zip
+          if-no-files-found: error
+          retention-days: 14

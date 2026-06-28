@@ -5,6 +5,7 @@ import { AppError, toWireError } from '@/src/lib/errors'
 import {
   PROMPT_PORT_PREFIX,
   REPLY_SOURCE,
+  type AbortMessage,
   type AdminMessage,
   type AdminResponse,
   type AdminState,
@@ -111,7 +112,12 @@ export default defineBackground(() => {
           await handleRequestAccess(origin, tabId, reqId, args)
           return
         case 'printers':
-          await replyToTab(tabId, reqId, true, await grantedPrinterInfos(origin))
+          await replyToTab(
+            tabId,
+            reqId,
+            true,
+            await grantedPrinterInfos(origin),
+          )
           return
         case 'status': {
           const printer = await requireGrantedPrinter(
@@ -152,16 +158,18 @@ export default defineBackground(() => {
     reqId: string,
     args: unknown,
   ): Promise<void> {
+    const { appName, reason, force } = (args ?? {}) as {
+      appName?: string
+      reason?: string
+      force?: boolean
+    }
     const existing = await getGrant(origin)
-    if (existing) {
-      // Already granted — no prompt.
+    if (existing && !force) {
+      // Already granted and the caller didn't ask to re-prompt — return as is.
       await replyToTab(tabId, reqId, true, await grantedPrinterInfos(origin))
       return
     }
-    const { appName, reason } = (args ?? {}) as {
-      appName?: string
-      reason?: string
-    }
+    // No grant, or `force` — open the prompt (it pre-checks current picks).
     await openDecisionPrompt('consent', {
       reqId,
       origin,
@@ -200,12 +208,24 @@ export default defineBackground(() => {
           start: args.start,
           gcode: args.gcode,
           size: args.gcode.size,
+          timeoutMs: args.timeoutMs,
         },
       })
       return
     }
-    await doUpload(tabId, reqId, printer.id, args.name, args.gcode, args.start)
+    await doUpload(
+      tabId,
+      reqId,
+      printer.id,
+      args.name,
+      args.gcode,
+      args.start,
+      args.timeoutMs,
+    )
   }
+
+  // In-flight uploads, so an `abort` message can cancel the right fetch.
+  const inflightUploads = new Map<string, AbortController>()
 
   async function doUpload(
     tabId: number,
@@ -214,16 +234,43 @@ export default defineBackground(() => {
     name: string,
     gcode: PrintRpcArgs['gcode'],
     start: boolean | undefined,
+    timeoutMs: number | undefined,
   ): Promise<void> {
+    const controller = new AbortController()
+    inflightUploads.set(reqId, controller)
+    // Caller-configurable timeout; undefined = none (Prusa can be slow to ingest).
+    const timer =
+      timeoutMs && timeoutMs > 0
+        ? setTimeout(
+            () => controller.abort(new AppError('TIMEOUT', 'Upload timed out')),
+            timeoutMs,
+          )
+        : null
     try {
       const printer = await getPrinter(printerId)
-      if (!printer) throw new AppError('NOT_GRANTED', 'Printer no longer exists')
+      if (!printer)
+        throw new AppError('NOT_GRANTED', 'Printer no longer exists')
       const bytes = wireToBytes(gcode)
-      const result = await uploadAndPrint(printer, name, bytes, start !== false)
+      const result = await uploadAndPrint(
+        printer,
+        name,
+        bytes,
+        start !== false,
+        controller.signal,
+      )
       await replyToTab(tabId, reqId, true, result)
     } catch (err) {
       await replyError(tabId, reqId, err)
+    } finally {
+      if (timer) clearTimeout(timer)
+      inflightUploads.delete(reqId)
     }
+  }
+
+  function abortUpload(reqId: string): void {
+    inflightUploads
+      .get(reqId)
+      ?.abort(new AppError('CANCELLED', 'Upload aborted by the page'))
   }
 
   // ── decision prompts (rendered in the action popup) ────────────────────────
@@ -301,6 +348,8 @@ export default defineBackground(() => {
       if (op.kind === 'access') {
         if (!printers) printers = await adminPrinterInfos()
         const p = op.payload as { appName?: string; reason?: string }
+        // Pre-check what's already granted (re-prompt to expand a grant).
+        const grant = await getGrant(op.origin)
         out.push({
           kind: 'consent',
           reqId,
@@ -308,9 +357,15 @@ export default defineBackground(() => {
           ...(p?.appName ? { appName: p.appName } : {}),
           ...(p?.reason ? { reason: p.reason } : {}),
           printers,
+          grantedIds: grant?.printerIds ?? [],
+          confirmEachPrint: grant?.confirmEachPrint ?? true,
         })
       } else {
-        const p = op.payload as { printerName: string; name: string; size: number }
+        const p = op.payload as {
+          printerName: string
+          name: string
+          size: number
+        }
         out.push({
           kind: 'confirm',
           reqId,
@@ -330,7 +385,11 @@ export default defineBackground(() => {
       const op = await takePending(msg.reqId)
       if (!op || op.kind !== 'access') return
       if (!msg.allow) {
-        await replyError(op.tabId, op.reqId, new AppError('DENIED', 'User denied access'))
+        await replyError(
+          op.tabId,
+          op.reqId,
+          new AppError('DENIED', 'User denied access'),
+        )
         return
       }
       // Only grant printers that are actually configured.
@@ -349,7 +408,12 @@ export default defineBackground(() => {
         confirmEachPrint: msg.confirmEachPrint,
         createdAt: Date.now(),
       })
-      await replyToTab(op.tabId, op.reqId, true, await grantedPrinterInfos(op.origin))
+      await replyToTab(
+        op.tabId,
+        op.reqId,
+        true,
+        await grantedPrinterInfos(op.origin),
+      )
     } finally {
       deciding.delete(msg.reqId)
       await refreshBadge()
@@ -366,6 +430,7 @@ export default defineBackground(() => {
         name: string
         start?: boolean
         gcode: PrintRpcArgs['gcode']
+        timeoutMs?: number
       }
       if (!msg.proceed) {
         await replyError(
@@ -378,13 +443,17 @@ export default defineBackground(() => {
       if (msg.dontAskAgain) {
         await updateGrant(op.origin, { confirmEachPrint: false })
       }
-      await doUpload(
+      // Kick the upload off WITHOUT awaiting it, so the popup can close right
+      // away. The in-flight fetch keeps the SW alive; doUpload replies to the
+      // page by reqId when it finishes (and registers itself for abort).
+      void doUpload(
         op.tabId,
         op.reqId,
         payload.printerId,
         payload.name,
         payload.gcode,
         payload.start,
+        payload.timeoutMs,
       )
     } finally {
       deciding.delete(msg.reqId)
@@ -405,9 +474,17 @@ export default defineBackground(() => {
         const op = await takePending(reqId)
         if (!op) return // already decided
         if (op.kind === 'access') {
-          await replyError(op.tabId, reqId, new AppError('DENIED', 'Consent dismissed'))
+          await replyError(
+            op.tabId,
+            reqId,
+            new AppError('DENIED', 'Consent dismissed'),
+          )
         } else {
-          await replyError(op.tabId, reqId, new AppError('CANCELLED', 'Print dismissed'))
+          await replyError(
+            op.tabId,
+            reqId,
+            new AppError('CANCELLED', 'Print dismissed'),
+          )
         }
         await refreshBadge()
       })()
@@ -427,8 +504,10 @@ export default defineBackground(() => {
         auth:
           p.auth.mode === 'digest'
             ? { mode: 'digest', username: p.auth.username }
-            : { mode: 'apikey' },
-        hasSecret: Boolean(p.auth.secret),
+            : p.auth.mode === 'none'
+              ? { mode: 'none' }
+              : { mode: 'apikey' },
+        hasSecret: p.auth.mode !== 'none' && Boolean(p.auth.secret),
         ...(p.cache?.model ? { model: p.cache.model } : {}),
         ...(p.cache?.storage ? { storage: p.cache.storage } : {}),
         hasPermission: await hasHostPermission(p.baseUrl),
@@ -446,7 +525,9 @@ export default defineBackground(() => {
     const existing = draft.id ? await getPrinter(draft.id) : undefined
 
     let auth: PrinterRecord['auth']
-    if (draft.auth.mode === 'digest') {
+    if (draft.auth.mode === 'none') {
+      auth = { mode: 'none' }
+    } else if (draft.auth.mode === 'digest') {
       const username = draft.auth.username.trim()
       if (!username) throw new AppError('BAD_REQUEST', 'username required')
       const secret =
@@ -501,9 +582,7 @@ export default defineBackground(() => {
           await deletePrinter(msg.id)
           if (printer) {
             const others = await getPrinters()
-            const sameHost = others.some(
-              (p) => p.baseUrl === printer.baseUrl,
-            )
+            const sameHost = others.some((p) => p.baseUrl === printer.baseUrl)
             if (!sameHost) await removeHostPermission(printer.baseUrl)
           }
           return { ok: true }
@@ -529,7 +608,10 @@ export default defineBackground(() => {
           await setSettings({ pauseAll: msg.value })
           return { ok: true }
         default:
-          return { ok: false, error: toWireError(new AppError('BAD_REQUEST', 'bad op')) }
+          return {
+            ok: false,
+            error: toWireError(new AppError('BAD_REQUEST', 'bad op')),
+          }
       }
     } catch (err) {
       return { ok: false, error: toWireError(err) }
@@ -574,7 +656,7 @@ export default defineBackground(() => {
     const m = message as { kind?: string }
     if (!m || typeof m.kind !== 'string') return undefined
 
-    // Page RPCs MUST come from a content-script relay (web origin, real tab).
+    // Page RPCs and abort control messages come from the content-script relay.
     if (m.kind === 'rpc') {
       if (isExtensionPage(sender)) return undefined // not a page relay
       const tabId = sender.tab?.id
@@ -583,6 +665,11 @@ export default defineBackground(() => {
       if (tabId == null || !origin) return undefined
       void handleRpc(message as RpcMessage, origin, tabId)
       return undefined // replies go out-of-band via tabs.sendMessage
+    }
+    if (m.kind === 'abort') {
+      if (isExtensionPage(sender)) return undefined
+      abortUpload((message as AbortMessage).reqId)
+      return undefined
     }
 
     // Everything else must originate from one of our own extension pages.

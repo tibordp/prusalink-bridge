@@ -1,9 +1,6 @@
 import { AppError, networkError } from './errors'
 import { buildDigestHeader, parseWwwAuthenticate } from './digest'
-import {
-  normalizeLegacyStatus,
-  normalizeV1Status,
-} from './normalize'
+import { normalizeLegacyStatus, normalizeV1Status } from './normalize'
 import { assertHostPermission } from './permissions'
 import { updatePrinterCache } from './storage'
 import type { PrinterRecord, PrinterStatus } from './types'
@@ -16,7 +13,6 @@ import type { PrinterRecord, PrinterStatus } from './types'
  */
 
 const CONNECT_TIMEOUT_MS = 10_000
-const UPLOAD_TIMEOUT_MS = 60_000
 
 interface FetchOpts {
   method: string
@@ -24,7 +20,12 @@ interface FetchOpts {
   path: string
   headers?: Record<string, string>
   body?: BodyInit | null
+  /** internal timeout (ms). Ignored when `signal` is provided — the caller owns
+   *  timing then. Defaults to a short connect timeout for small requests. */
   timeoutMs?: number
+  /** caller-owned abort signal (uploads). Its `reason`, when an AppError, is
+   *  surfaced as the thrown error (CANCELLED / TIMEOUT). */
+  signal?: AbortSignal
 }
 
 /** Perform an authenticated fetch, handling API-Key directly and Digest via the
@@ -36,11 +37,25 @@ async function authFetch(
 ): Promise<Response> {
   await assertHostPermission(printer.baseUrl)
   const url = printer.baseUrl + opts.path
-  const timeoutMs = opts.timeoutMs ?? CONNECT_TIMEOUT_MS
+  // A caller-owned signal means the caller controls timing → no internal timer.
+  const timeoutMs = opts.timeoutMs ?? (opts.signal ? 0 : CONNECT_TIMEOUT_MS)
 
   const doFetch = (extraHeaders: Record<string, string>): Promise<Response> => {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    const timer =
+      timeoutMs > 0
+        ? setTimeout(
+            () =>
+              controller.abort(new AppError('TIMEOUT', 'Request timed out')),
+            timeoutMs,
+          )
+        : null
+    const onExternalAbort = () => controller.abort(opts.signal?.reason)
+    if (opts.signal) {
+      if (opts.signal.aborted) controller.abort(opts.signal.reason)
+      else
+        opts.signal.addEventListener('abort', onExternalAbort, { once: true })
+    }
     return fetch(url, {
       method: opts.method,
       headers: { ...opts.headers, ...extraHeaders },
@@ -49,10 +64,16 @@ async function authFetch(
       // never attach the user's cookies/credentials to a LAN printer
       credentials: 'omit',
       cache: 'no-store',
-    }).finally(() => clearTimeout(timer))
+    }).finally(() => {
+      if (timer) clearTimeout(timer)
+      opts.signal?.removeEventListener('abort', onExternalAbort)
+    })
   }
 
   try {
+    if (printer.auth.mode === 'none') {
+      return await doFetch({})
+    }
     if (printer.auth.mode === 'apikey') {
       return await doFetch({ 'X-Api-Key': printer.auth.secret })
     }
@@ -74,6 +95,9 @@ async function authFetch(
     })
     return await doFetch({ Authorization: authorization })
   } catch (err) {
+    // An AppError reason on the caller's signal (CANCELLED / TIMEOUT) wins.
+    const reason = opts.signal?.reason
+    if (reason instanceof AppError) throw reason
     throw networkError(err)
   }
 }
@@ -87,7 +111,11 @@ function assertOk(res: Response): Response {
   if (res.status === 409) {
     throw new AppError('PRINTER_BUSY', 'Printer is busy', 409)
   }
-  throw new AppError('HTTP_ERROR', `Printer returned HTTP ${res.status}`, res.status)
+  throw new AppError(
+    'HTTP_ERROR',
+    `Printer returned HTTP ${res.status}`,
+    res.status,
+  )
 }
 
 async function jsonOrNull(res: Response): Promise<unknown> {
@@ -128,7 +156,11 @@ export async function probe(printer: PrinterRecord): Promise<ProbeResult> {
         ? info.firmware
         : undefined
   if (model) await updatePrinterCache(printer.id, { model })
-  return { ...(model ? { model } : {}), ...(firmware ? { firmware } : {}), raw: info }
+  return {
+    ...(model ? { model } : {}),
+    ...(firmware ? { firmware } : {}),
+    raw: info,
+  }
 }
 
 function pickModel(info: Record<string, unknown>): string | undefined {
@@ -144,7 +176,10 @@ function pickModel(info: Record<string, unknown>): string | undefined {
 export async function discoverStorage(printer: PrinterRecord): Promise<string> {
   if (printer.cache?.storage) return printer.cache.storage
   try {
-    const res = await authFetch(printer, { method: 'GET', path: '/api/v1/storage' })
+    const res = await authFetch(printer, {
+      method: 'GET',
+      path: '/api/v1/storage',
+    })
     if (res.ok) {
       const data = asObj(await jsonOrNull(res))
       const list = Array.isArray(data.storage_list)
@@ -171,8 +206,13 @@ export async function discoverStorage(printer: PrinterRecord): Promise<string> {
 
 // ── status ────────────────────────────────────────────────────────────
 
-export async function getStatus(printer: PrinterRecord): Promise<PrinterStatus> {
-  const res = await authFetch(printer, { method: 'GET', path: '/api/v1/status' })
+export async function getStatus(
+  printer: PrinterRecord,
+): Promise<PrinterStatus> {
+  const res = await authFetch(printer, {
+    method: 'GET',
+    path: '/api/v1/status',
+  })
   if (res.status === 404) return getStatusLegacy(printer)
   assertOk(res)
   const status = asObj(await jsonOrNull(res))
@@ -181,7 +221,10 @@ export async function getStatus(printer: PrinterRecord): Promise<PrinterStatus> 
   let job: Record<string, unknown> | null = null
   if (status.job) {
     try {
-      const jres = await authFetch(printer, { method: 'GET', path: '/api/v1/job' })
+      const jres = await authFetch(printer, {
+        method: 'GET',
+        path: '/api/v1/job',
+      })
       if (jres.ok && jres.status !== 204) job = asObj(await jsonOrNull(jres))
     } catch {
       /* job enrichment is best-effort */
@@ -243,7 +286,10 @@ async function currentJobId(
     /* ignore */
   }
   try {
-    const res = await authFetch(printer, { method: 'GET', path: '/api/v1/status' })
+    const res = await authFetch(printer, {
+      method: 'GET',
+      path: '/api/v1/status',
+    })
     if (res.ok) {
       const status = asObj(await jsonOrNull(res))
       const job = asObj(status.job)
@@ -267,6 +313,7 @@ export async function uploadAndPrint(
   name: string,
   bytes: Uint8Array,
   start: boolean,
+  signal?: AbortSignal,
 ): Promise<UploadResult> {
   const storage = await discoverStorage(printer)
   const path = `/api/v1/files/${encodeURIComponent(storage)}/${encodeURIComponent(name)}`
@@ -281,11 +328,11 @@ export async function uploadAndPrint(
     path,
     headers,
     body: toArrayBuffer(bytes),
-    timeoutMs: UPLOAD_TIMEOUT_MS,
+    signal,
   })
 
   if (res.status === 404) {
-    return uploadAndPrintLegacy(printer, name, bytes, start)
+    return uploadAndPrintLegacy(printer, name, bytes, start, signal)
   }
   assertOk(res)
   const data = asObj(await jsonOrNull(res))
@@ -298,6 +345,7 @@ async function uploadAndPrintLegacy(
   name: string,
   bytes: Uint8Array,
   start: boolean,
+  signal?: AbortSignal,
 ): Promise<UploadResult> {
   const form = new FormData()
   form.append('file', new Blob([toArrayBuffer(bytes)]), name)
@@ -306,7 +354,7 @@ async function uploadAndPrintLegacy(
     method: 'POST',
     path: '/api/files/local',
     body: form,
-    timeoutMs: UPLOAD_TIMEOUT_MS,
+    signal,
   })
   assertOk(res)
   return {}

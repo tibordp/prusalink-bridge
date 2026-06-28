@@ -14,12 +14,7 @@ export const SOURCE_PAGE = 'prusalink-page' as const
 export const SOURCE_CS = 'prusalink-cs' as const
 
 export type Method =
-  | 'ping'
-  | 'requestAccess'
-  | 'printers'
-  | 'print'
-  | 'status'
-  | 'cancel'
+  'ping' | 'requestAccess' | 'printers' | 'print' | 'status' | 'cancel'
 
 // ── Public types ──────────────────────────────────────────────────
 
@@ -34,13 +29,7 @@ export interface PrinterInfo {
 }
 
 export type PrinterState =
-  | 'idle'
-  | 'printing'
-  | 'paused'
-  | 'error'
-  | 'busy'
-  | 'attention'
-  | 'offline'
+  'idle' | 'printing' | 'paused' | 'error' | 'busy' | 'attention' | 'offline'
 
 export interface PrinterStatus {
   state: PrinterState
@@ -57,6 +46,12 @@ export interface PrintArgs {
   gcode: string | Blob | ArrayBuffer
   /** default true: start immediately after upload */
   start?: boolean
+  /** Abort the upload (and reject with CANCELLED). Useful for big files over a
+   *  slow link. */
+  signal?: AbortSignal
+  /** Upload timeout in ms. Default: none — Prusa firmware can be slow to ingest
+   *  a file, and the link may be slow, so we don't impose one. */
+  timeoutMs?: number
 }
 
 export type BridgeErrorCode =
@@ -89,6 +84,13 @@ export interface RequestEnvelope {
   args?: unknown
 }
 
+/** page → relay control message: abort the in-flight request `reqId`. */
+export interface AbortEnvelope {
+  source: typeof SOURCE_PAGE
+  reqId: string
+  abort: true
+}
+
 /** relay → page */
 export interface ResponseEnvelope {
   source: typeof SOURCE_CS
@@ -102,12 +104,15 @@ export interface ResponseEnvelope {
 export interface RequestAccessArgs {
   appName?: string
   reason?: string
+  /** Always show the consent prompt even if a grant exists (to add printers). */
+  force?: boolean
 }
 export interface PrintWireArgs {
   printerId: string
   name: string
   gcode: string | Blob | ArrayBuffer
   start?: boolean
+  timeoutMs?: number
 }
 export interface PrinterIdArgs {
   printerId: string

@@ -38,7 +38,11 @@ export async function gcodeToWire(
   gcode: string | Blob | ArrayBuffer | ArrayBufferView,
 ): Promise<WireGcode> {
   if (typeof gcode === 'string') {
-    return { data: gcode, encoding: 'text', size: new TextEncoder().encode(gcode).length }
+    return {
+      data: gcode,
+      encoding: 'text',
+      size: new TextEncoder().encode(gcode).length,
+    }
   }
   let bytes: Uint8Array
   if (gcode instanceof Blob) {
