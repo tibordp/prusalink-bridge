@@ -166,11 +166,7 @@ M117 Bridge manual test
       )
       const doRequest = (force) =>
         run(force ? 'requestAccess(force)' : 'requestAccess', async () => {
-          const printers = await bridge.requestAccess({
-            appName: 'Manual Test',
-            reason: 'exercise the bridge end-to-end',
-            force,
-          })
+          const printers = await bridge.requestAccess({ force })
           fillPrinters(printers)
           return printers
         })

@@ -102,8 +102,6 @@ export interface ResponseEnvelope {
 
 /** Method-specific argument payloads carried in `RequestEnvelope.args`. */
 export interface RequestAccessArgs {
-  appName?: string
-  reason?: string
   /** Always show the consent prompt even if a grant exists (to add printers). */
   force?: boolean
 }

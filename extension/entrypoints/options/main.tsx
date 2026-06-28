@@ -22,21 +22,14 @@ function renderPrinters(): void {
   clear(root)
   if (!state || state.printers.length === 0) {
     root.append(
-      el(
-        'div',
-        { class: 'card muted small' },
-        'No printers yet. Add one below.',
-      ),
+      <div class="card muted small">No printers yet. Add one below.</div>,
     )
     return
   }
   for (const p of state.printers) root.append(printerCard(p))
 }
 
-function printerCard(p: PrinterAdminInfo): HTMLElement {
-  const permPill = p.hasPermission
-    ? el('span', { class: 'pill ok' }, 'reachable')
-    : el('span', { class: 'pill warn' }, 'permission needed')
+function printerCard(p: PrinterAdminInfo) {
   const authLabel =
     p.auth.mode === 'digest'
       ? `Digest (${p.auth.username})`
@@ -44,37 +37,31 @@ function printerCard(p: PrinterAdminInfo): HTMLElement {
         ? 'No auth'
         : 'API key'
 
-  return el(
-    'div',
-    { class: 'card' },
-    el(
-      'div',
-      { class: 'row between' },
-      el(
-        'div',
-        { class: 'grow' },
-        el('div', { class: 'strong' }, p.name),
-        el('div', { class: 'small mono muted' }, p.baseUrl),
-        el(
-          'div',
-          { class: 'small muted' },
-          `${authLabel}${p.model ? ' · ' + p.model : ''}`,
-        ),
-      ),
-      permPill,
-    ),
-    el(
-      'div',
-      { class: 'actions' },
-      el('button', { on: { click: () => testPrinter(p) } }, 'Test connection'),
-      el('button', { on: { click: () => openEditor(p) } }, 'Edit'),
-      el(
-        'button',
-        { class: 'danger', on: { click: () => deletePrinter(p) } },
-        'Delete',
-      ),
-    ),
-    el('div', { class: 'toast', dataset: { for: p.id } }),
+  return (
+    <div class="card">
+      <div class="row between">
+        <div class="grow">
+          <div class="strong">{p.name}</div>
+          <div class="small mono muted">{p.baseUrl}</div>
+          <div class="small muted">
+            {`${authLabel}${p.model ? ' · ' + p.model : ''}`}
+          </div>
+        </div>
+        {p.hasPermission ? (
+          <span class="pill ok">reachable</span>
+        ) : (
+          <span class="pill warn">permission needed</span>
+        )}
+      </div>
+      <div class="actions">
+        <button on={{ click: () => testPrinter(p) }}>Test connection</button>
+        <button on={{ click: () => openEditor(p) }}>Edit</button>
+        <button class="danger" on={{ click: () => deletePrinter(p) }}>
+          Delete
+        </button>
+      </div>
+      <div class="toast" dataset={{ for: p.id }} />
+    </div>
   )
 }
 
@@ -127,55 +114,58 @@ function openEditor(p?: PrinterAdminInfo): void {
   const root = document.getElementById('editor')!
   clear(root)
 
-  const name = el('input', {
-    type: 'text',
-    value: p?.name ?? '',
-    placeholder: 'Prusa MK4 (studio)',
-  }) as HTMLInputElement
-  const baseUrl = el('input', {
-    type: 'url',
-    value: p?.baseUrl ?? '',
-    placeholder: 'http://192.168.1.50',
-  }) as HTMLInputElement
-  const mode = el(
-    'select',
-    {},
-    el('option', { value: 'apikey' }, 'API key (recommended)'),
-    el('option', { value: 'digest' }, 'HTTP Digest'),
-    el('option', { value: 'none' }, 'None (behind a trusted proxy)'),
+  const name = (
+    <input type="text" value={p?.name ?? ''} placeholder="Prusa MK4 (studio)" />
+  ) as HTMLInputElement
+  const baseUrl = (
+    <input
+      type="url"
+      value={p?.baseUrl ?? ''}
+      placeholder="http://192.168.1.50"
+    />
+  ) as HTMLInputElement
+  const mode = (
+    <select>
+      <option value="apikey">API key (recommended)</option>
+      <option value="digest">HTTP Digest</option>
+      <option value="none">None (behind a trusted proxy)</option>
+    </select>
   ) as HTMLSelectElement
   mode.value = p?.auth.mode ?? 'apikey'
 
-  const username = el('input', {
-    type: 'text',
-    value: p && p.auth.mode === 'digest' ? p.auth.username : 'maker',
-    placeholder: 'maker',
-  }) as HTMLInputElement
-  const usernameWrap = el(
-    'div',
-    {},
-    el('label', {}, 'Digest username'),
-    username,
-  )
+  const username = (
+    <input
+      type="text"
+      value={p && p.auth.mode === 'digest' ? p.auth.username : 'maker'}
+      placeholder="maker"
+    />
+  ) as HTMLInputElement
+  const usernameWrap = (
+    <div>
+      <label>Digest username</label>
+      {username}
+    </div>
+  ) as HTMLElement
 
-  const secret = el('input', {
-    type: 'password',
-    placeholder: p?.hasSecret ? '•••••• (leave blank to keep)' : '',
-    autocomplete: 'off',
-  }) as HTMLInputElement
-  const secretWrap = el(
-    'div',
-    {},
-    el('label', {}, 'Secret'),
-    secret,
-    el(
-      'div',
-      { class: 'small muted' },
-      'API key is shown in your printer’s PrusaLink settings. For Digest, the MK4 uses username “maker”.',
-    ),
-  )
+  const secret = (
+    <input
+      type="password"
+      placeholder={p?.hasSecret ? '•••••• (leave blank to keep)' : ''}
+      autocomplete="off"
+    />
+  ) as HTMLInputElement
+  const secretWrap = (
+    <div>
+      <label>Secret</label>
+      {secret}
+      <div class="small muted">
+        API key is shown in your printer’s PrusaLink settings. For Digest, the
+        MK4 uses username “maker”.
+      </div>
+    </div>
+  ) as HTMLElement
 
-  const toast = el('div', { class: 'toast' })
+  const toast = (<div class="toast" />) as HTMLElement
 
   function syncMode(): void {
     usernameWrap.style.display = mode.value === 'digest' ? 'block' : 'none'
@@ -273,27 +263,25 @@ function openEditor(p?: PrinterAdminInfo): void {
   }
 
   root.append(
-    el(
-      'div',
-      { class: 'card' },
-      el('div', { class: 'strong' }, p ? 'Edit printer' : 'Add printer'),
-      el('label', {}, 'Name'),
-      name,
-      el('label', {}, 'Base URL'),
-      baseUrl,
-      el('label', {}, 'Authentication'),
-      mode,
-      usernameWrap,
-      secretWrap,
-      el(
-        'div',
-        { class: 'actions' },
-        el('button', { on: { click: onTest } }, 'Test connection'),
-        el('button', { class: 'primary', on: { click: onSave } }, 'Save'),
-        el('button', { on: { click: closeEditor } }, 'Cancel'),
-      ),
-      toast,
-    ),
+    <div class="card">
+      <div class="strong">{p ? 'Edit printer' : 'Add printer'}</div>
+      <label>Name</label>
+      {name}
+      <label>Base URL</label>
+      {baseUrl}
+      <label>Authentication</label>
+      {mode}
+      {usernameWrap}
+      {secretWrap}
+      <div class="actions">
+        <button on={{ click: onTest }}>Test connection</button>
+        <button class="primary" on={{ click: onSave }}>
+          Save
+        </button>
+        <button on={{ click: closeEditor }}>Cancel</button>
+      </div>
+      {toast}
+    </div>,
   )
   name.focus()
 }
@@ -310,47 +298,35 @@ function renderGrants(): void {
   const entries = Object.entries(state?.grants ?? {})
   if (entries.length === 0) {
     root.append(
-      el(
-        'div',
-        { class: 'card muted small' },
-        'No sites have been granted access.',
-      ),
+      <div class="card muted small">No sites have been granted access.</div>,
     )
     return
   }
   for (const [origin, g] of entries) {
     root.append(
-      el(
-        'div',
-        { class: 'card row between' },
-        el(
-          'div',
-          { class: 'grow' },
-          el('div', { class: 'mono strong truncate' }, origin),
-          el(
-            'div',
-            { class: 'small muted' },
-            `${g.printerIds.length} printer(s) · ${
+      <div class="card row between">
+        <div class="grow">
+          <div class="mono strong truncate">{origin}</div>
+          <div class="small muted">
+            {`${g.printerIds.length} printer(s) · ${
               g.confirmEachPrint
                 ? 'confirms each print'
                 : 'prints without confirm'
-            }`,
-          ),
-        ),
-        el(
-          'button',
-          {
-            class: 'danger',
-            on: {
-              click: async () => {
-                await admin.revokeGrant(origin)
-                await refresh()
-              },
+            }`}
+          </div>
+        </div>
+        <button
+          class="danger"
+          on={{
+            click: async () => {
+              await admin.revokeGrant(origin)
+              await refresh()
             },
-          },
-          'Revoke',
-        ),
-      ),
+          }}
+        >
+          Revoke
+        </button>
+      </div>,
     )
   }
 }

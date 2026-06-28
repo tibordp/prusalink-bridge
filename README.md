@@ -22,8 +22,8 @@ web app ──@tibordp/prusalink-bridge──▶ content-script relay ──▶ 
           (postMessage)                (origin-pinned)          (creds, consent)   (LAN HTTP)
 ```
 
-The page can lie about its `appName`, but **not** about its origin — every grant
-keys on the browser-reported `sender.origin`.
+The page **cannot** lie about its origin — every grant keys on the
+browser-reported `sender.origin`, never on anything the page sends.
 
 ## Layout (pnpm monorepo)
 

@@ -218,3 +218,9 @@ hr {
   border-top: 1px solid var(--border);
   margin: 16px 0;
 }
+
+/* Gap above the printer editor when it's open (none when closed/empty). */
+#editor:not(:empty) {
+  display: block;
+  margin-top: 12px;
+}

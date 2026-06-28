@@ -5,6 +5,9 @@
   "compilerOptions": {
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "jsx": "react",
+    "jsxFactory": "el",
+    "jsxFragmentFactory": "Fragment"
   }
 }

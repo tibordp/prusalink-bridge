@@ -55,11 +55,9 @@ async function showPrompts(): Promise<boolean> {
   clear(host)
   if (prompts.length > 1) {
     host.append(
-      el(
-        'div',
-        { class: 'small muted', style: { marginBottom: '6px' } },
-        `${prompts.length} pending requests — reviewing 1 of ${prompts.length}`,
-      ),
+      <div class="small muted" style={{ marginBottom: '6px' }}>
+        {`${prompts.length} pending requests — reviewing 1 of ${prompts.length}`}
+      </div>,
     )
   }
 
@@ -107,29 +105,25 @@ function renderPrinters(): void {
   const root = document.getElementById('printers')!
   clear(root)
   if (!state || state.printers.length === 0) {
-    root.append(
-      el('div', { class: 'card muted small' }, 'No printers configured.'),
-    )
+    root.append(<div class="card muted small">No printers configured.</div>)
     return
   }
   for (const p of state.printers) root.append(printerCard(p))
 }
 
-function printerCard(p: PrinterAdminInfo): HTMLElement {
-  return el(
-    'div',
-    { class: 'card', dataset: { printer: p.id } },
-    el(
-      'div',
-      { class: 'row between' },
-      el('div', { class: 'strong truncate grow' }, p.name),
-      el(
-        'span',
-        { class: 'pill', dataset: { state: p.id } },
-        p.hasPermission ? '—' : 'no perm',
-      ),
-    ),
-    el('div', { class: 'small muted', dataset: { detail: p.id } }, p.baseUrl),
+function printerCard(p: PrinterAdminInfo) {
+  return (
+    <div class="card" dataset={{ printer: p.id }}>
+      <div class="row between">
+        <div class="strong truncate grow">{p.name}</div>
+        <span class="pill" dataset={{ state: p.id }}>
+          {p.hasPermission ? '—' : 'no perm'}
+        </span>
+      </div>
+      <div class="small muted" dataset={{ detail: p.id }}>
+        {p.baseUrl}
+      </div>
+    </div>
   )
 }
 
@@ -182,38 +176,28 @@ function renderGrants(): void {
   clear(root)
   const entries = Object.entries(state?.grants ?? {})
   if (entries.length === 0) {
-    root.append(el('div', { class: 'card muted small' }, 'No sites granted.'))
+    root.append(<div class="card muted small">No sites granted.</div>)
     return
   }
   for (const [origin, g] of entries) {
     root.append(
-      el(
-        'div',
-        { class: 'card row between' },
-        el(
-          'div',
-          { class: 'grow' },
-          el('div', { class: 'mono small truncate' }, origin),
-          el(
-            'div',
-            { class: 'small muted' },
-            `${g.printerIds.length} printer(s)`,
-          ),
-        ),
-        el(
-          'button',
-          {
-            class: 'danger small',
-            on: {
-              click: async () => {
-                await admin.revokeGrant(origin)
-                await refresh()
-              },
+      <div class="card row between">
+        <div class="grow">
+          <div class="mono small truncate">{origin}</div>
+          <div class="small muted">{`${g.printerIds.length} printer(s)`}</div>
+        </div>
+        <button
+          class="danger small"
+          on={{
+            click: async () => {
+              await admin.revokeGrant(origin)
+              await refresh()
             },
-          },
-          'Revoke',
-        ),
-      ),
+          }}
+        >
+          Revoke
+        </button>
+      </div>,
     )
   }
 }

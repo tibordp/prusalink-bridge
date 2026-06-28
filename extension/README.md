@@ -63,8 +63,8 @@ so it's reliable). Multiple pending requests queue and are reviewed one at a tim
 
 ## Security notes
 
-- **Origin is authoritative.** Grants key on the browser-reported `sender.origin`.
-  The page-supplied `appName` is decorative and rendered as _"claims to be …"_.
+- **Origin is authoritative.** Grants key on the browser-reported `sender.origin`,
+  never on anything the page sends. Opaque/null origins are rejected.
 - **Credential confinement.** Secrets are written only by the options page and
   read only by the background's PrusaLink client. They never appear in any
   message that can reach a page, nor in error messages.

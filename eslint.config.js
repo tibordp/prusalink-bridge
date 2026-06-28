@@ -40,5 +40,13 @@ export default tseslint.config(
     files: ['**/*.config.{js,ts}', 'extension/scripts/**'],
     languageOptions: { globals: { ...globals.node } },
   },
+  // JSX compiles to the `el`/`Fragment` factory; tell the parser so it counts
+  // those imports as used (no React, no eslint-plugin-react needed).
+  {
+    files: ['**/*.tsx'],
+    languageOptions: {
+      parserOptions: { jsxPragma: 'el', jsxFragmentName: 'Fragment' },
+    },
+  },
   prettier,
 )

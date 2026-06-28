@@ -53,8 +53,6 @@ export interface PrusaLinkBridge {
    * can add or remove printers.
    */
   requestAccess(opts?: {
-    appName?: string
-    reason?: string
     /** Always show the consent prompt, even if a grant already exists. Use this
      *  to let the user grant access to additional printers. */
     force?: boolean
@@ -222,16 +220,8 @@ class Bridge implements PrusaLinkBridge {
     }
   }
 
-  requestAccess(opts?: {
-    appName?: string
-    reason?: string
-    force?: boolean
-  }): Promise<PrinterInfo[]> {
-    return this.send<PrinterInfo[]>('requestAccess', {
-      appName: opts?.appName,
-      reason: opts?.reason,
-      force: opts?.force,
-    })
+  requestAccess(opts?: { force?: boolean }): Promise<PrinterInfo[]> {
+    return this.send<PrinterInfo[]>('requestAccess', { force: opts?.force })
   }
 
   printers(): Promise<PrinterInfo[]> {

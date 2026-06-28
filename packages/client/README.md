@@ -26,10 +26,7 @@ if (!(await bridge.available())) {
 // requestAccess() opens a consent prompt, so call it from a user gesture (click):
 button.addEventListener('click', async () => {
   try {
-    const printers = await bridge.requestAccess({
-      appName: 'Kurvengefahr',
-      reason: 'send plots to your plotter',
-    })
+    const printers = await bridge.requestAccess()
     const target = printers[0]
     await bridge.print(target.id, { name: 'plot.gcode', gcode })
   } catch (e) {
@@ -51,7 +48,7 @@ createBridge(): PrusaLinkBridge
 interface PrusaLinkBridge {
   available(timeoutMs?: number): Promise<boolean>       // ping/pong, never throws
   version(): Promise<string | null>                     // extension protocol version
-  requestAccess(opts?: { appName?; reason?; force? }): Promise<PrinterInfo[]>
+  requestAccess(opts?: { force? }): Promise<PrinterInfo[]>
   printers(): Promise<PrinterInfo[]>                     // already-granted printers, no prompt
   print(printerId, { name, gcode, start?, signal?, timeoutMs? }): Promise<{ jobId? }>
   status(printerId): Promise<PrinterStatus>

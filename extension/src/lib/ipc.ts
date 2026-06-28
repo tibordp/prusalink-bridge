@@ -61,8 +61,6 @@ export interface ConsentPrompt {
   kind: 'consent'
   reqId: string
   origin: string
-  appName?: string
-  reason?: string
   printers: PrinterAdminInfo[]
   /** Printer ids already granted to this origin — pre-checked when re-prompting
    *  to expand a grant. Empty for a first-time request. */

@@ -11,13 +11,20 @@ import { defineConfig } from 'wxt'
 // per printer at add-time.
 export default defineConfig({
   srcDir: '.',
+  // Compile JSX to our tiny `el`/`Fragment` DOM factory (see src/ui/dom.ts).
+  vite: () => ({
+    esbuild: { jsxFactory: 'el', jsxFragment: 'Fragment' },
+  }),
   manifest: ({ browser }) => ({
     name: 'PrusaLink Bridge',
     // Keep this honest about affiliation — it shows in the store and the
     // extensions list. (Manifest descriptions are capped at 132 chars.)
     description:
       'Send jobs to your own PrusaLink printers from web apps you trust. Unofficial — not affiliated with Prusa Research.',
-    permissions: ['storage', 'tabs'],
+    // Only `storage`. We reply to pages with tabs.sendMessage(sender.tab.id, …),
+    // which needs neither the `tabs` permission (we never read url/title) nor a
+    // host permission (it targets our own declared content script).
+    permissions: ['storage'],
     // On Firefox, host patterns live under optional_permissions instead.
     ...(browser === 'firefox'
       ? { optional_permissions: ['http://*/*', 'https://*/*'] }
@@ -27,7 +34,7 @@ export default defineConfig({
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {
-            gecko: { id: 'prusalink-bridge@ojdip.net' },
+            gecko: { id: 'prusalink-bridge@tibordp.github.io' },
           },
         }
       : {}),

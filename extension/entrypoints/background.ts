@@ -158,11 +158,7 @@ export default defineBackground(() => {
     reqId: string,
     args: unknown,
   ): Promise<void> {
-    const { appName, reason, force } = (args ?? {}) as {
-      appName?: string
-      reason?: string
-      force?: boolean
-    }
+    const { force } = (args ?? {}) as { force?: boolean }
     const existing = await getGrant(origin)
     if (existing && !force) {
       // Already granted and the caller didn't ask to re-prompt — return as is.
@@ -174,7 +170,7 @@ export default defineBackground(() => {
       reqId,
       origin,
       tabId,
-      payload: { appName, reason },
+      payload: {},
     })
     // The reply is sent when the popup reports a decision (or is dismissed).
   }
@@ -347,15 +343,12 @@ export default defineBackground(() => {
     for (const [reqId, op] of Object.entries(all)) {
       if (op.kind === 'access') {
         if (!printers) printers = await adminPrinterInfos()
-        const p = op.payload as { appName?: string; reason?: string }
         // Pre-check what's already granted (re-prompt to expand a grant).
         const grant = await getGrant(op.origin)
         out.push({
           kind: 'consent',
           reqId,
           origin: op.origin,
-          ...(p?.appName ? { appName: p.appName } : {}),
-          ...(p?.reason ? { reason: p.reason } : {}),
           printers,
           grantedIds: grant?.printerIds ?? [],
           confirmEachPrint: grant?.confirmEachPrint ?? true,
@@ -660,9 +653,24 @@ export default defineBackground(() => {
     if (m.kind === 'rpc') {
       if (isExtensionPage(sender)) return undefined // not a page relay
       const tabId = sender.tab?.id
+      if (tabId == null) return undefined
       const origin =
         sender.origin ?? (sender.url ? safeOrigin(sender.url) : undefined)
-      if (tabId == null || !origin) return undefined
+      // Require a real http(s) origin. Opaque origins (sandboxed/data: docs)
+      // report "null" and would all collide on one grant key — reject them.
+      if (!origin || origin === 'null' || !/^https?:\/\//.test(origin)) {
+        void replyToTab(
+          tabId,
+          (message as RpcMessage).reqId,
+          false,
+          undefined,
+          {
+            code: 'BAD_REQUEST',
+            message: 'Unsupported origin',
+          },
+        )
+        return undefined
+      }
       void handleRpc(message as RpcMessage, origin, tabId)
       return undefined // replies go out-of-band via tabs.sendMessage
     }
