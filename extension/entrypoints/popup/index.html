@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PrusaLink Bridge</title>
+    <style>
+      body {
+        width: 340px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Shown when a site is requesting consent or a print confirmation. -->
+    <div id="prompt" class="wrap" style="max-width: 100%; padding: 14px; display: none"></div>
+
+    <div id="normal" class="wrap" style="max-width: 100%; padding: 14px">
+      <div class="row between">
+        <h1 style="margin: 0">PrusaLink Bridge</h1>
+        <a href="#" id="open-options" class="small">Options</a>
+      </div>
+
+      <div class="card" style="margin-top: 10px">
+        <div class="checkbox" style="margin: 0">
+          <input type="checkbox" id="pause-all" />
+          <label for="pause-all">Pause all printing (kill switch)</label>
+        </div>
+      </div>
+
+      <h2>Printers</h2>
+      <div id="printers"></div>
+
+      <h2>Site access</h2>
+      <div id="grants"></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

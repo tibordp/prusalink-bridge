@@ -1,0 +1,25 @@
+{
+  "name": "prusalink-bridge-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PrusaLink Bridge browser extension (MV3, Chrome + Firefox via WXT).",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "@tibordp/prusalink-bridge": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wxt": "^0.19.13"
+  }
+}

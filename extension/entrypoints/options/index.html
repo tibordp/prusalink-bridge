@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- WXT reads per-page manifest options from meta tags. -->
+    <meta name="manifest.open_in_tab" content="true" />
+    <title>PrusaLink Bridge — Options</title>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>PrusaLink Bridge</h1>
+      <p class="muted small">
+        Configure your printers and manage which sites may reach them. Printer
+        URLs and secrets stay in this extension — websites never see them.
+      </p>
+
+      <div class="note" id="storage-note">
+        Secrets are stored unencrypted in the browser's extension storage. That's
+        fine for a self-hosted LAN tool, but don't reuse a sensitive password.
+      </div>
+
+      <h2>Printers</h2>
+      <div id="printers"></div>
+      <div class="actions">
+        <button id="add-printer" class="primary">+ Add printer</button>
+      </div>
+
+      <div id="editor"></div>
+
+      <h2>Site access</h2>
+      <div id="grants"></div>
+
+      <h2>Safety</h2>
+      <div class="card">
+        <div class="checkbox">
+          <input type="checkbox" id="pause-all" />
+          <label for="pause-all"
+            >Pause all printing (kill switch). Every print request is cancelled
+            while this is on.</label
+          >
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

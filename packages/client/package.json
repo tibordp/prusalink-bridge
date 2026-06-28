@@ -1,0 +1,53 @@
+{
+  "name": "@tibordp/prusalink-bridge",
+  "version": "0.1.0",
+  "description": "Page-facing client for the PrusaLink Bridge browser extension (unofficial; not affiliated with Prusa Research). Pure postMessage, zero runtime dependencies; lets a web app drive the user's own PrusaLink printers via the extension, with explicit per-origin consent.",
+  "license": "MIT",
+  "author": "Tibor Djurica Potpara <tibor.djurica@ojdip.net>",
+  "homepage": "https://github.com/tibordp/prusalink-bridge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tibordp/prusalink-bridge.git",
+    "directory": "packages/client"
+  },
+  "bugs": "https://github.com/tibordp/prusalink-bridge/issues",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js",
+      "require": "./dist/protocol.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "prusalink",
+    "prusa",
+    "3d-printing",
+    "plotter",
+    "browser-extension",
+    "gcode"
+  ],
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

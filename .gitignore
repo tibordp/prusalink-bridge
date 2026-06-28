@@ -1,0 +1,12 @@
+node_modules/
+*.log
+
+# WXT
+extension/.output/
+extension/.wxt/
+
+# build output
+packages/*/dist/
+
+# misc
+.DS_Store

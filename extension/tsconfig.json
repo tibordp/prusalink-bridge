@@ -1,0 +1,10 @@
+{
+  // WXT generates a base tsconfig under .wxt/ that wires up auto-imports and
+  // the `~/` alias. We extend it and tighten strictness.
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true
+  }
+}

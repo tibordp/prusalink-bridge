@@ -1,0 +1,21 @@
+{
+  "name": "prusalink-bridge-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PrusaLink Bridge — browser extension + client shim that let web apps drive your own PrusaLink printers over the LAN, gated by per-origin consent.",
+  "scripts": {
+    "dev": "pnpm --filter prusalink-bridge-extension dev",
+    "dev:firefox": "pnpm --filter prusalink-bridge-extension dev:firefox",
+    "build": "pnpm -r build",
+    "build:extension": "pnpm --filter prusalink-bridge-extension build",
+    "build:firefox": "pnpm --filter prusalink-bridge-extension build:firefox",
+    "build:client": "pnpm --filter @tibordp/prusalink-bridge build",
+    "zip": "pnpm --filter prusalink-bridge-extension zip",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.8.0"
+}
