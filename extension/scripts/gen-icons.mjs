@@ -1,5 +1,6 @@
-// Generates simple placeholder PNG icons (orange rounded square with a white
-// filament dot) for the extension. Zero dependencies — hand-rolled PNG encoder.
+// Generates the extension PNG icons: an orange rounded square with a white
+// filament dot, antialiased against transparency. Matches site/icon.svg.
+// Zero dependencies — hand-rolled PNG encoder.
 import { deflateSync } from 'node:zlib'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -31,27 +32,45 @@ function chunk(type, data) {
 }
 
 function png(size) {
-  const r = size / 2
+  const c = size / 2
   const radius = size * 0.22 // rounded corners
+  const dotR = size * 0.18 // center dot
+  const SS = 4 // supersample grid (SS×SS samples/pixel) for antialiasing
+  const N = SS * SS
   const raw = Buffer.alloc(size * (size * 4 + 1))
   let o = 0
   for (let y = 0; y < size; y++) {
     raw[o++] = 0 // filter: none
     for (let x = 0; x < size; x++) {
-      // rounded square mask
-      const dx = Math.max(radius - x, x - (size - radius), 0)
-      const dy = Math.max(radius - y, y - (size - radius), 0)
-      const inside = Math.hypot(dx, dy) <= radius
-      // center dot
-      const dot = Math.hypot(x - r, y - r) <= size * 0.18
-      let px
-      if (!inside) px = [0, 0, 0, 0]
-      else if (dot) px = [...WHITE, 255]
-      else px = [...ORANGE, 255]
-      raw[o++] = px[0]
-      raw[o++] = px[1]
-      raw[o++] = px[2]
-      raw[o++] = px[3]
+      // Coverage via supersampling: nIn = inside the rounded square (→ alpha),
+      // nDot = inside the dot (→ white vs orange). Antialiases both the outer
+      // corners (against transparency) and the dot edge (against orange).
+      let nIn = 0
+      let nDot = 0
+      for (let j = 0; j < SS; j++) {
+        for (let i = 0; i < SS; i++) {
+          const px = x + (i + 0.5) / SS
+          const py = y + (j + 0.5) / SS
+          const dx = Math.max(radius - px, px - (size - radius), 0)
+          const dy = Math.max(radius - py, py - (size - radius), 0)
+          if (Math.hypot(dx, dy) > radius) continue
+          nIn++
+          if (Math.hypot(px - c, py - c) <= dotR) nDot++
+        }
+      }
+      let r = 0
+      let g = 0
+      let b = 0
+      if (nIn > 0) {
+        const dotFrac = nDot / nIn
+        r = Math.round(ORANGE[0] * (1 - dotFrac) + WHITE[0] * dotFrac)
+        g = Math.round(ORANGE[1] * (1 - dotFrac) + WHITE[1] * dotFrac)
+        b = Math.round(ORANGE[2] * (1 - dotFrac) + WHITE[2] * dotFrac)
+      }
+      raw[o++] = r
+      raw[o++] = g
+      raw[o++] = b
+      raw[o++] = Math.round((nIn / N) * 255)
     }
   }
   const ihdr = Buffer.alloc(13)
