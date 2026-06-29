@@ -1,6 +1,6 @@
 # Build instructions (for Firefox / AMO source review)
 
-This is the source for the **PrusaLink Bridge** extension. It's a pnpm monorepo:
+This is the source for the **Bridge for PrusaLink** extension. It's a pnpm monorepo:
 the extension (`extension/`) imports a workspace package (`packages/client/`), so
 both are included here and built together.
 

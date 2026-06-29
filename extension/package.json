@@ -1,9 +1,9 @@
 {
   "name": "prusalink-bridge-extension",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "PrusaLink Bridge browser extension (MV3, Chrome + Firefox via WXT).",
+  "description": "Bridge for PrusaLink browser extension (MV3, Chrome + Firefox via WXT).",
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",

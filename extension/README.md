@@ -1,4 +1,4 @@
-# PrusaLink Bridge — extension
+# Bridge for PrusaLink — extension
 
 MV3 browser extension (Chrome + Firefox via [WXT](https://wxt.dev)). It is the
 only place printer credentials ever exist.

@@ -327,8 +327,8 @@ export default defineBackground(() => {
       await action.setBadgeBackgroundColor?.({ color: '#ea6c2d' })
       await action.setTitle?.({
         title: n
-          ? `PrusaLink Bridge — ${n} request${n > 1 ? 's' : ''} need your approval`
-          : 'PrusaLink Bridge',
+          ? `Bridge for PrusaLink — ${n} request${n > 1 ? 's' : ''} need your approval`
+          : 'Bridge for PrusaLink',
       })
     } catch {
       /* badge is cosmetic */

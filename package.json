@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "PrusaLink Bridge — browser extension + client shim that let web apps drive your own PrusaLink printers over the LAN, gated by per-origin consent.",
+  "description": "Bridge for PrusaLink — browser extension + client shim that let web apps drive your own PrusaLink printers over the LAN, gated by per-origin consent.",
   "scripts": {
     "dev": "pnpm --filter prusalink-bridge-extension dev",
     "dev:firefox": "pnpm --filter prusalink-bridge-extension dev:firefox",

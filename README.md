@@ -1,4 +1,4 @@
-# PrusaLink Bridge
+# Bridge for PrusaLink
 
 A browser extension that lets **any web app** drive **your own** PrusaLink
 printers over the LAN — gated by an explicit, per-origin consent prompt. Printer

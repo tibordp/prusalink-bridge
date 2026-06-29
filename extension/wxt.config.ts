@@ -38,7 +38,7 @@ export default defineConfig({
     ],
   },
   manifest: ({ browser }) => ({
-    name: 'PrusaLink Bridge',
+    name: 'Bridge for PrusaLink',
     // Keep this honest about affiliation — it shows in the store and the
     // extensions list. (Manifest descriptions are capped at 132 chars.)
     description:
@@ -51,7 +51,7 @@ export default defineConfig({
     ...(browser === 'firefox'
       ? { optional_permissions: ['http://*/*', 'https://*/*'] }
       : { optional_host_permissions: ['http://*/*', 'https://*/*'] }),
-    action: { default_title: 'PrusaLink Bridge' },
+    action: { default_title: 'Bridge for PrusaLink' },
     // Firefox needs an explicit add-on id for stable storage / permissions.
     ...(browser === 'firefox'
       ? {
