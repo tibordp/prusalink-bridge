@@ -53,10 +53,15 @@ export default defineConfig({
       : { optional_host_permissions: ['http://*/*', 'https://*/*'] }),
     action: { default_title: 'Bridge for PrusaLink' },
     // Firefox needs an explicit add-on id for stable storage / permissions.
+    // AMO also requires every new add-on to declare what user data it collects;
+    // we collect none, so the data_collection_permissions are `none`.
     ...(browser === 'firefox'
       ? {
           browser_specific_settings: {
-            gecko: { id: 'prusalink-bridge@tibordp.github.io' },
+            gecko: {
+              id: 'prusalink-bridge@tibordp.github.io',
+              data_collection_permissions: { required: ['none'] },
+            },
           },
         }
       : {}),
