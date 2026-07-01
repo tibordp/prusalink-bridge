@@ -1,0 +1,22 @@
+#!/bin/sh
+# Format-check staged files with Prettier before committing, mirroring the
+# `Format check` step in CI (.github/workflows/ci.yml). Auto-installed via the
+# root package.json "prepare" script, which points core.hooksPath here.
+#
+# Skip with `git commit --no-verify` if you really need to.
+
+# Only the files staged for this commit, restricted to what Prettier handles.
+staged=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep -Ei '\.(js|mjs|cjs|ts|tsx|json|css|html|md|yml|yaml)$')
+
+[ -z "$staged" ] && exit 0
+
+# --ignore-unknown keeps Prettier quiet about anything it can't format;
+# .prettierignore still applies, so ignored paths are skipped.
+if ! echo "$staged" | xargs npx prettier --check --ignore-unknown; then
+  echo
+  echo "✖ Prettier found unformatted files (see above)."
+  echo "  Fix with:  pnpm format   (or: npx prettier --write <files>)"
+  echo "  Then re-stage and commit again."
+  exit 1
+fi

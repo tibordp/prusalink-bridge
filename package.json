@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Bridge for PrusaLink — browser extension + client shim that let web apps drive your own PrusaLink printers over the LAN, gated by per-origin consent.",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "dev": "pnpm --filter prusalink-bridge-extension dev",
     "dev:firefox": "pnpm --filter prusalink-bridge-extension dev:firefox",
     "build": "pnpm -r build",
