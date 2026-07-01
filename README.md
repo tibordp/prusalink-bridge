@@ -5,7 +5,8 @@ printers over the LAN — gated by an explicit, per-origin consent prompt. Print
 URLs and credentials live only in the extension; the calling web app never sees
 them.
 
-**[Live demo & overview →](https://tibordp.github.io/prusalink-bridge/)**
+**[Install for Chrome →](https://chromewebstore.google.com/detail/bridge-for-prusalink/ooflceedbnippfondcfmanmbgohehfcc)**
+ · **[Live demo & overview →](https://tibordp.github.io/prusalink-bridge/)**
 
 > **Unofficial.** This is a community project, not affiliated with or endorsed by
 > Prusa Research. PrusaLink and Prusa are trademarks of Prusa Research a.s.; they
